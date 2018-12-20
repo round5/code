@@ -29,91 +29,16 @@
 
 /**
  * @file
- * Implementation of the encrypt and decrypt functions based on the CCA KEM.
- * algorithm.
+ * Implementation of the encrypt and decrypt functions based on the CCA KEM
+ * algorithm (NIST api).
  */
 
-#include "api.h"
+#include "cca_encrypt.h"
 
-#include "r5_cca_kem.h"
+#if CRYPTO_CIPHERTEXTBYTES == 0
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+extern int crypto_encrypt_keypair(unsigned char *pk, unsigned char *sk);
+extern int crypto_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned char *m, const unsigned long long m_len, const unsigned char *pk);
+extern int crypto_encrypt_open(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, const unsigned long long ct_len, const unsigned char *sk);
 
-#include "r5_dem.h"
-#include "r5_hash.h"
-#include "misc.h"
-#include "rng.h"
-
-/*******************************************************************************
- * Public functions
- ******************************************************************************/
-
-#ifdef ROUND5_CCA_PKE
-
-int crypto_encrypt_keypair(unsigned char *pk, unsigned char *sk) {
-    return r5_cca_kem_keygen(pk, sk);
-}
-
-int crypto_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned char *m, const unsigned long long m_len, const unsigned char *pk) {
-    int result = 1;
-    const unsigned long long c1_len = PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES;
-    unsigned char c1[PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES];
-    unsigned long long c2_len;
-    unsigned char k[PARAMS_KAPPA_BYTES];
-
-    /* Determine c1 and k */
-    r5_cca_kem_encapsulate(c1, k, pk);
-
-    /* Copy c1 into first part of ct */
-    memcpy(ct, c1, c1_len);
-    *ct_len = c1_len;
-
-    /* Apply DEM to get second part of ct */
-    if (round5_dem(ct + c1_len, &c2_len, k, PARAMS_KAPPA_BYTES, m, m_len)) {
-        fprintf(stderr, "Failed to apply DEM\n");
-        goto done_encrypt;
-    }
-    *ct_len += c2_len;
-
-    /* All OK */
-    result = 0;
-
-done_encrypt:
-
-    return result;
-}
-
-int crypto_encrypt_open(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, unsigned long long ct_len, const unsigned char *sk) {
-    int result = 1;
-    unsigned char k[PARAMS_KAPPA_BYTES];
-    const unsigned char * const c1 = ct;
-    const unsigned long long c1_len = PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES;
-    const unsigned char * const c2 = ct + c1_len;
-    const unsigned long c2_len = ct_len - c1_len;
-
-    /* Check length, should be at least c1_len + 16 (for the DEM tag) */
-    if (ct_len < (c1_len + 16U)) {
-        fprintf(stderr, "Invalid ciphertext message: %llu < %llu\n", ct_len, c1_len + 16U);
-        goto done_decrypt;
-    }
-
-    /* Determine k */
-    r5_cca_kem_decapsulate(k, c1, sk);
-
-    /* Apply DEM-inverse to get m */
-    if (round5_dem_inverse(m, m_len, k, PARAMS_KAPPA_BYTES, c2, c2_len)) {
-        fprintf(stderr, "Failed to apply DEM-inverse\n");
-        goto done_decrypt;
-    }
-
-    /* OK */
-    result = 0;
-
-done_decrypt:
-
-    return result;
-}
-
-#endif /* ROUND5_CCA_PKE */
+#endif

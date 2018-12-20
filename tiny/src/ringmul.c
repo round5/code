@@ -30,7 +30,7 @@
 // Fast ring arithmetic (without cache attack countermeasures)
 
 #include "ringmul.h"
-#include "parameters.h"
+#include "r5_parameter_sets.h"
 
 #if PARAMS_K == 1 && !defined(CM_CACHE)
 

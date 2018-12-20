@@ -28,11 +28,10 @@
  */
 
 #include "r5_cpa_pke.h"
-#include "parameters.h"
+#include "r5_parameter_sets.h"
 
 #if PARAMS_K == 1
 
-#include "api.h"
 #include "r5_hash.h"
 #include "rng.h"
 #include "xef.h"
@@ -117,7 +116,7 @@ int r5_cpa_pke_keygen(uint8_t *pk, uint8_t *sk) {
     uint16_t S_idx[PARAMS_H / 2][2];
 
     randombytes(pk, PARAMS_KAPPA_BYTES); // sigma = seed of A
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
     printf("r5_cpa_pke_keygen: tau=%u\n", PARAMS_TAU);
     print_hex("r5_cpa_pke_keygen: sigma", pk, PARAMS_KAPPA_BYTES, 1);
 #endif
@@ -183,40 +182,40 @@ int r5_cpa_pke_encrypt(uint8_t *ct, const uint8_t *pk, const uint8_t *m, const u
     ringmul_q(U, A, R_idx); // U = A * R  (mod q)
     ringmul_p(X, B, R_idx); // X = B * R  (mod p)
 
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
 #ifdef DEBUG
-    print_hex("encrypt_rho: m", m, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cpa_pke_encrypt: m", m, PARAMS_KAPPA_BYTES, 1);
 #endif
-    print_hex("encrypt_rho: rho", rho, PARAMS_KAPPA_BYTES, 1);
-    print_hex("encrypt_rho: sigma", pk, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cpa_pke_encrypt: rho", rho, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cpa_pke_encrypt: sigma", pk, PARAMS_KAPPA_BYTES, 1);
 #ifdef DEBUG
     for (i = 0; i < PARAMS_ND; ++i) {
         A[i] &= (PARAMS_Q - 1);
     }
-    print_sage_u_vector_matrix("encrypt_rho: A", A, PARAMS_K, PARAMS_K, PARAMS_N);
+    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: A", A, PARAMS_K, PARAMS_K, PARAMS_N);
     uint16_t DEBUG_OUT[PARAMS_ND];
     for (i = 0; i < PARAMS_ND; ++i) {
         DEBUG_OUT[i] = B[i];
     }
-    print_sage_u_vector_matrix("encrypt_rho: B", DEBUG_OUT, PARAMS_K, PARAMS_N_BAR, PARAMS_N);
+    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: B", DEBUG_OUT, PARAMS_K, PARAMS_N_BAR, PARAMS_N);
 
     int16_t R_T[PARAMS_ND] = {0};
     for (i = 0; i < PARAMS_H / 2; ++i) {
         R_T[R_idx[i][0]] = 1;
         R_T[R_idx[i][1]] = -1;
     }
-    print_sage_s_vector_matrix("encrypt_rho: R_T", R_T, PARAMS_K, PARAMS_M_BAR, PARAMS_N);
+    print_sage_s_vector_matrix("r5_cpa_pke_encrypt: R_T", R_T, PARAMS_K, PARAMS_M_BAR, PARAMS_N);
     for (i = 0; i < PARAMS_ND; ++i) {
         DEBUG_OUT[i] = (uint16_t) (U[i] & (PARAMS_Q - 1));
     }
-    print_sage_u_vector_matrix("encrypt_rho: uncompressed U", DEBUG_OUT, PARAMS_K, PARAMS_M_BAR, PARAMS_N);
+    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: uncompressed U", DEBUG_OUT, PARAMS_K, PARAMS_M_BAR, PARAMS_N);
 
     for (i = 0; i < PARAMS_MU; ++i) {
         DEBUG_OUT[i] = (uint16_t) (X[i] & (PARAMS_P - 1));
     }
-    print_sage_u_vector("encrypt_rho: uncompressed X", DEBUG_OUT, PARAMS_MU);
+    print_sage_u_vector("r5_cpa_pke_encrypt: uncompressed X", DEBUG_OUT, PARAMS_MU);
 #endif
-    print_hex("encrypt_rho: m1", m1, BITS_TO_BYTES(PARAMS_MU * PARAMS_B_BITS), 1);
+    print_hex("r5_cpa_pke_encrypt: m1", m1, BITS_TO_BYTES(PARAMS_MU * PARAMS_B_BITS), 1);
 #endif
 
     pack_q_p(ct, U, PARAMS_H2); // ct = U | v
@@ -329,7 +328,7 @@ int r5_cpa_pke_decrypt(uint8_t *m, const uint8_t *sk, const uint8_t *ct) {
 #endif
     memcpy(m, m1, PARAMS_KAPPA_BYTES);
 
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
     print_hex("r5_cpa_pke_decrypt: m", m, PARAMS_KAPPA_BYTES, 1);
 #endif
 

@@ -101,11 +101,11 @@ int r5_cca_kem_encapsulate_p(unsigned char *ct, unsigned char *k, const unsigned
     memcpy(hash_input + params->kappa_bytes, pk, params->pk_size);
     hash(L_g_rho, 3U * params->kappa_bytes, hash_input, (size_t) (params->kappa_bytes + params->pk_size), params->kappa_bytes);
 
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
-    print_hex("cca_encrypt: m", m, params->kappa_bytes, 1);
-    print_hex("cca_encrypt: L", L_g_rho, params->kappa_bytes, 1);
-    print_hex("cca_encrypt: g", L_g_rho + params->kappa_bytes, params->kappa_bytes, 1);
-    print_hex("cca_encrypt: rho", L_g_rho + 2 * params->kappa_bytes, params->kappa_bytes, 1);
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
+    print_hex("r5_cca_kem_encapsulate: m", m, params->kappa_bytes, 1);
+    print_hex("r5_cca_kem_encapsulate: L", L_g_rho, params->kappa_bytes, 1);
+    print_hex("r5_cca_kem_encapsulate: g", L_g_rho + params->kappa_bytes, params->kappa_bytes, 1);
+    print_hex("r5_cca_kem_encapsulate: rho", L_g_rho + 2 * params->kappa_bytes, params->kappa_bytes, 1);
 #endif
 
     /* Encrypt m: ct = (U,v) */
@@ -149,11 +149,11 @@ int r5_cca_kem_decapsulate_p(unsigned char *k, const unsigned char *ct, const un
     memcpy(hash_input + params->kappa_bytes, pk, params->pk_size);
     hash(L_g_rho_prime, 3U * params->kappa_bytes, hash_input, (size_t) (params->kappa_bytes + params->pk_size), params->kappa_bytes);
 
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
-    print_hex("cca_decrypt: m_prime", m_prime, params->kappa_bytes, 1);
-    print_hex("cca_decrypt: L_prime", L_g_rho_prime, params->kappa_bytes, 1);
-    print_hex("cca_decrypt: g_prime", L_g_rho_prime + params->kappa_bytes, params->kappa_bytes, 1);
-    print_hex("cca_decrypt: rho_prime", L_g_rho_prime + 2 * params->kappa_bytes, params->kappa_bytes, 1);
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
+    print_hex("r5_cca_kem_decapsulate: m_prime", m_prime, params->kappa_bytes, 1);
+    print_hex("r5_cca_kem_decapsulate: L_prime", L_g_rho_prime, params->kappa_bytes, 1);
+    print_hex("r5_cca_kem_decapsulate: g_prime", L_g_rho_prime + params->kappa_bytes, params->kappa_bytes, 1);
+    print_hex("r5_cca_kem_decapsulate: rho_prime", L_g_rho_prime + 2 * params->kappa_bytes, params->kappa_bytes, 1);
 #endif
 
     /* Encrypt m: ct' = (U',v') */

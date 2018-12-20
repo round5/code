@@ -34,90 +34,11 @@
  * `CRYPTO_BYTES`, and `CRYPTO_CIPHERBYTES`.
  */
 
-#ifndef API_H
-#define API_H
+#ifndef _API_H_
+#define _API_H_
 
 #include "r5_parameter_sets.h"
+#include "cca_encrypt.h"
+#include "cpa_kem.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-    /*
-     * Conditionally provide the KEM and PKE functions. The implementation of
-     * these functions can be found in cpa_kem.c and cca_encrypt.c
-     * respectively.
-     */
-
-#if CRYPTO_CIPHERTEXTBYTES != 0
-    /**
-     * Generates a CPA KEM key pair. Uses the fixed parameter configuration from `api.h`.
-     *
-     * @param[out] pk public key
-     * @param[out] sk secret key
-     * @return __0__ in case of success
-     */
-    int crypto_kem_keypair(unsigned char *pk, unsigned char *sk);
-
-    /**
-     * CPA KEM encapsulate. Uses the fixed parameter configuration from `api.h`.
-     *
-     * @param[out] ct    key encapsulation message (ciphertext)
-     * @param[out] k     shared secret
-     * @param[in]  pk    public key with which the message is encapsulated
-     * @return __0__ in case of success
-     */
-    int crypto_kem_enc(unsigned char *ct, unsigned char *k, const unsigned char *pk);
-
-    /**
-     * CPA KEM de-capsulate. Uses the fixed parameter configuration from `api.h`.
-     *
-     * @param[out] k     shared secret
-     * @param[in]  ct    key encapsulation message (ciphertext)
-     * @param[in]  sk    secret key with which the message is to be de-capsulated
-     * @return __0__ in case of success
-     */
-    int crypto_kem_dec(unsigned char *k, const unsigned char *ct, const unsigned char *sk);
-
-#else
-
-    /**
-     * Generates an ENCRYPT key pair. Uses the fixed parameter configuration from `api.h`.
-     *
-     * @param[out] pk public key
-     * @param[out] sk secret key
-     * @return __0__ in case of success
-     */
-    int crypto_encrypt_keypair(unsigned char *pk, unsigned char *sk);
-
-    /**
-     * Encrypts a message. Uses the fixed parameter configuration from `api.h`.
-     *
-     * @param[out] ct     the encrypted message
-     * @param[out] ct_len the length of the encrypted message (`CRYPTO_CIPHERTEXTBYTES` + `m_len`)
-     * @param[in]  m      the message to encrypt
-     * @param[in]  m_len  the length of the message to encrypt
-     * @param[in]  pk     the public key to use for the encryption
-     * @return __0__ in case of success
-     */
-    int crypto_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned char *m, const unsigned long long m_len, const unsigned char *pk);
-
-    /**
-     * Decrypts a message. Uses the fixed parameter configuration from `api.h`.
-     *
-     * @param[out] m      the decrypted message
-     * @param[out] m_len  the length of the decrypted message (`ct_len` - `CRYPTO_CIPHERTEXTBYTES`)
-     * @param[in]  ct     the message to decrypt
-     * @param[in]  ct_len the length of the message to decrypt
-     * @param[in]  sk     the secret key to use for the decryption
-     * @return __0__ in case of success
-     */
-    int crypto_encrypt_open(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, unsigned long long ct_len, const unsigned char *sk);
-
-#endif
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* API_H */
+#endif /* _API_H_ */

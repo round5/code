@@ -27,8 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _PARAMETERS_H_
-#define _PARAMETERS_H_
+#ifndef _R5_PARAMETER_SETS_H_
+#define _R5_PARAMETER_SETS_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -1287,7 +1287,6 @@ typedef uint8_t modt_t;
 #endif
 
 // Derive the NIST parameters
-
 #ifdef ROUND5_CCA_PKE
 
 // CCA_PKE Variant
@@ -1306,4 +1305,4 @@ typedef uint8_t modt_t;
 
 #endif /* ROUND5_CCA_PKE */
 
-#endif /* _PARAMETERS_H_ */
+#endif /* _R5_PARAMETER_SETS_H_ */

@@ -35,8 +35,8 @@
  * Note: all sizes are in bytes, not bits!
  */
 
-#ifndef SHAKE_H
-#define SHAKE_H
+#ifndef _SHAKE_H_
+#define _SHAKE_H_
 
 #include <stdlib.h>
 #include <stddef.h>

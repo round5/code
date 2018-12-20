@@ -35,7 +35,7 @@
 #ifndef A_RANDOM_H
 #define A_RANDOM_H
 
-#include "parameters.h"
+#include "r5_parameter_sets.h"
 
 #ifdef __cplusplus
 extern "C" {

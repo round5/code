@@ -49,7 +49,7 @@ extern "C" {
      *
      * @param size the size of the memory to allocate
      * @param file the name of the file where the allocation occurred
-     * @paran line the line number in the file where the allocation occurred
+     * @param line the line number in the file where the allocation occurred
      * @return pointer to the allocated memory
      */
     inline void *checked_malloc(size_t size, const char *file, int line) {
@@ -67,7 +67,7 @@ extern "C" {
      * @param count the number of elements to allocate
      * @param size the size of the memory to allocate
      * @param file the name of the file where the allocation occurred
-     * @paran line the line number in the file where the allocation occurred
+     * @param line the line number in the file where the allocation occurred
      * @return pointer to the allocated memory
      */
     inline void *checked_calloc(size_t count, size_t size, const char *file, const int line) {
@@ -85,7 +85,7 @@ extern "C" {
      * @param ptr the pointer to the originally allocated memory
      * @param size the size of the memory to allocate instead
      * @param file the name of the file where the allocation occurred
-     * @paran line the line number in the file where the allocation occurred
+     * @param line the line number in the file where the allocation occurred
      * @return pointer to the reallocated memory
      */
     inline void *checked_realloc(void *ptr, size_t size, const char *file, const int line) {

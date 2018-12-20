@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018, PQShield and Koninklijke Philips N.V.
- * Markku-Juhani O. Saarinen, Oscar Garcia-Morchon, Hayo Baan
+ * Markku-Juhani O. Saarinen, Hayo Baan
  *
  * All rights reserved. A copyright license for redistribution and use in
  * source and binary forms, with or without modification, is hereby granted for
@@ -27,22 +27,61 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _RINGMUL_H_
-#define _RINGMUL_H_
+//  CPA Versions of KEM functionality
 
+#include "r5_cpa_kem.h"
 #include "r5_parameter_sets.h"
+#include "r5_cpa_pke.h"
+#include "r5_hash.h"
+#include "rng.h"
+#include "misc.h"
 
-#if PARAMS_K == 1
+#include <stdlib.h>
+#include <string.h>
 
-// create a sparse ternary vector from a seed
-void create_secret_vector(uint16_t idx[PARAMS_H / 2][2], const uint8_t *seed, const size_t seed_size);
+// CPA-KEM KeyGen()
 
-// multiplication mod q, result length n
-void ringmul_q(modq_t d[PARAMS_ND + PARAMS_LOOP_UNROLL], modq_t a[PARAMS_ND], uint16_t idx[PARAMS_H / 2][2]);
+int r5_cpa_kem_keygen(uint8_t *pk, uint8_t *sk) {
+    r5_cpa_pke_keygen(pk, sk);
 
-// multiplication mod p, result length mu
-void ringmul_p(modp_t d[PARAMS_MU + PARAMS_LOOP_UNROLL], modp_t a[PARAMS_ND], uint16_t idx[PARAMS_H / 2][2]);
+    return 0;
+}
 
-#endif
+// CPA-KEM Encaps()
 
-#endif /* _RINGMUL_H_ */
+int r5_cpa_kem_encapsulate(uint8_t *ct, uint8_t *k, const uint8_t *pk) {
+    uint8_t hash_input[PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE];
+
+    uint8_t m[PARAMS_KAPPA_BYTES];
+    uint8_t rho[PARAMS_KAPPA_BYTES];
+
+    /* Generate a random m and rho */
+    randombytes(m, PARAMS_KAPPA_BYTES);
+    randombytes(rho, PARAMS_KAPPA_BYTES);
+
+    r5_cpa_pke_encrypt(ct, pk, m, rho);
+
+    /* k = H(m, ct) */
+    memcpy(hash_input, m, PARAMS_KAPPA_BYTES);
+    memcpy(hash_input + PARAMS_KAPPA_BYTES, ct, PARAMS_CT_SIZE);
+    hash(k, PARAMS_KAPPA_BYTES, hash_input, PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE, PARAMS_KAPPA_BYTES);
+
+    return 0;
+}
+
+// CPA-KEM Decaps()
+
+int r5_cpa_kem_decapsulate(uint8_t *k, const uint8_t *ct, const uint8_t *sk) {
+    uint8_t hash_input[PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE];
+    uint8_t m[PARAMS_KAPPA_BYTES];
+
+    /* Decrypt m */
+    r5_cpa_pke_decrypt(m, sk, ct);
+
+    /* k = H(m, ct) */
+    memcpy(hash_input, m, PARAMS_KAPPA_BYTES);
+    memcpy(hash_input + PARAMS_KAPPA_BYTES, ct, PARAMS_CT_SIZE);
+    hash(k, PARAMS_KAPPA_BYTES, hash_input, PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE, PARAMS_KAPPA_BYTES);
+
+    return 0;
+}

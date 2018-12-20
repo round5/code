@@ -45,7 +45,7 @@ extern "C" {
      *
      * @param[in] entropy_input the bytes to use as input entropy (48 bytes)
      * @param[in] personalization_string an optional personalization string (48 bytes)
-     * @param[in] security_strength parameter to specify the security strength of the random bytes (unused)
+     * @param[in] security_strength parameter to specify the security strength of the random bytes
      */
     void randombytes_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength);
 

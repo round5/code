@@ -34,9 +34,9 @@
  */
 
 #include "cca_encrypt.h"
+#include "r5_cca_pke.h"
 
 #include <stdlib.h>
-#include "r5_cca_pke.h"
 
 /*******************************************************************************
  * Public functions
@@ -60,7 +60,7 @@ int crypto_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned
     return r5_cca_pke_encrypt_p(ct, ct_len, m, m_len, pk, params);
 }
 
-int crypto_encrypt_open(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, unsigned long long ct_len, const unsigned char *sk) {
+int crypto_encrypt_open(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, const unsigned long long ct_len, const unsigned char *sk) {
     parameters * params;
     if ((params = set_parameters_from_api()) == NULL) {
         exit(EXIT_FAILURE);

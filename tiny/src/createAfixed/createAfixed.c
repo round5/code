@@ -34,7 +34,7 @@
  * the file `a_fixed.h`.
  */
 
-#include "parameters.h"
+#include "r5_parameter_sets.h"
 #include "rng.h"
 #include "drbg.h"
 #include "misc.h"

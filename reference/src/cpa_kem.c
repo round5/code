@@ -33,9 +33,9 @@
  */
 
 #include "cpa_kem.h"
+#include "r5_cpa_kem.h"
 
 #include <stdlib.h>
-#include "r5_cpa_kem.h"
 
 /*******************************************************************************
  * Public functions

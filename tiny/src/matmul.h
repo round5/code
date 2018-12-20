@@ -30,7 +30,7 @@
 #ifndef _MATMUL_H_
 #define _MATMUL_H_
 
-#include "parameters.h"
+#include "r5_parameter_sets.h"
 
 #if PARAMS_K != 1
 

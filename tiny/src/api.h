@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2018, PQShield and Koninklijke Philips N.V.
- * Markku-Juhani O. Saarinen, Hayo Baan
+ * Copyright (c) 2018, Koninklijke Philips N.V.
+ * Hayo Baan, Jose Luis Torre Arce
  *
  * All rights reserved. A copyright license for redistribution and use in
  * source and binary forms, with or without modification, is hereby granted for
@@ -27,62 +27,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * @file
+ * Declaration of the NIST API functions and setting of the (NIST) API
+ * algorithm parameters: `CRYPTO_SECRETKEYBYTES`, `CRYPTO_PUBLICKEYBYTES`,
+ * `CRYPTO_BYTES`, and `CRYPTO_CIPHERBYTES`.
+ */
+
 #ifndef _API_H_
 #define _API_H_
 
-#include "parameters.h"
-
-#ifndef ROUND5_CCA_PKE
-
-/*
-    This is the API defined by NIST for PQC KEMs.
-
-    Public key:     unsigned char pk[CRYPTO_PUBLICKEYBYTES];
-    Secret key:     unsigned char sk[CRYPTO_SECRETKEYBYTES];
-    Ciphertext:     unsigned char ct[CRYPTO_CIPHERTEXTBYTES];
-    Shared secret:  unsigned char k[CRYPTO_BYTES];
-
-    The functions always return 0. In case of decryption error the shared
-    secrets from crypto_kem_enc() and crypto_kem_dec() simply won't match.
- */
-
-// Key generation: (pk, sk) = r5_cpa_kem_keygen()
-
-int crypto_kem_keypair(unsigned char *pk, unsigned char *sk);
-
-// Encapsulate: (ct, k) = r5_cpa_kem_encapsulate(pk)
-
-int crypto_kem_enc(unsigned char *ct, unsigned char *k, const unsigned char *pk);
-
-// Decapsulate: k = r5_cpa_kem_decapsulate(ct, sk)
-
-int crypto_kem_dec(unsigned char *k, const unsigned char *ct, const unsigned char *sk);
-
-#else
-
-/*
-    This is the API defined by NIST for PQC PKEs.
-
-    Public key:     unsigned char pk[CRYPTO_PUBLICKEYBYTES];
-    Secret key:     unsigned char sk[CRYPTO_SECRETKEYBYTES];
-    Ciphertext:     unsigned char ct[CRYPTO_BYTES] + message length;
-
-    The functions always return 0. In case of decryption error the message
-    simply won't match.
- */
-
-// Key generation: (pk, sk) = r5_cca_pke_keygen()
-
-int crypto_encrypt_keypair(unsigned char *pk, unsigned char *sk);
-
-// Encrypt: (ct) = r5_cca_pke_encrypt(m, pk)
-
-int crypto_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned char *m, const unsigned long long m_len, const unsigned char *pk);
-
-// Decrypt: (m) = r5_cca_pke_decrypt(ct, sk)
-
-int crypto_encrypt_open(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, unsigned long long ct_len, const unsigned char *sk);
-
-#endif /* ROUND5_CCA_PKE */
+#include "r5_parameter_sets.h"
+#include "cca_encrypt.h"
+#include "cpa_kem.h"
 
 #endif /* _API_H_ */

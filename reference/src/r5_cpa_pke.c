@@ -156,7 +156,7 @@ int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *pa
     /* B = A * S */
     mult_matrix(B, (int16_t *) A, params->k, params->k, S, params->k, params->n_bar, params->n, params->q, 0);
 
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
     printf("r5_cpa_pke_keygen: tau=%hhu\n", params->tau);
     print_hex("r5_cpa_pke_keygen: sigma", sigma, params->kappa_bytes, 1);
 #ifdef DEBUG
@@ -243,16 +243,16 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     mult_matrix(U, (int16_t *) A_T, params->k, params->k, R, params->k, params->m_bar, params->n, params->q, 0);
 
 #ifdef DEBUG
-    print_hex("encrypt_rho: m", m, params->kappa_bytes, 1);
+    print_hex("r5_cpa_pke_encrypt: m", m, params->kappa_bytes, 1);
 #endif
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
-    print_hex("encrypt_rho: rho", rho, params->kappa_bytes, 1);
-    print_hex("encrypt_rho: sigma", sigma, params->kappa_bytes, 1);
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
+    print_hex("r5_cpa_pke_encrypt: rho", rho, params->kappa_bytes, 1);
+    print_hex("r5_cpa_pke_encrypt: sigma", sigma, params->kappa_bytes, 1);
 #ifdef DEBUG
-    print_sage_u_vector_matrix("encrypt_rho: A", A, params->k, params->k, params->n);
-    print_sage_u_vector_matrix("encrypt_rho: B", B, params->k, params->n_bar, params->n);
-    print_sage_s_vector_matrix("encrypt_rho: R_T", R_T, params->k, params->m_bar, params->n);
-    print_sage_u_vector_matrix("encrypt_rho: uncompressed U", U, params->k, params->m_bar, params->n);
+    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: A", A, params->k, params->k, params->n);
+    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: B", B, params->k, params->n_bar, params->n);
+    print_sage_s_vector_matrix("r5_cpa_pke_encrypt: R_T", R_T, params->k, params->m_bar, params->n);
+    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: uncompressed U", U, params->k, params->m_bar, params->n);
 #endif
 #endif
 
@@ -265,7 +265,7 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     /* X = B^T * R */
     mult_matrix(X, (int16_t *) B_T, params->n_bar, params->k, R, params->k, params->m_bar, params->n, params->p, params->xe != 0 || params->f != 0);
 #ifdef DEBUG
-    print_sage_u_vector("encrypt_rho: uncompressed X", X, params->mu);
+    print_sage_u_vector("r5_cpa_pke_encrypt: uncompressed X", X, params->mu);
 #endif
 
     /* v is a matrix of scalars, so we use 1 as the number of coefficients */
@@ -284,11 +284,11 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     /* Pack ciphertext */
     pack_ct(ct, U, len_u, params->p_bits, v, params->mu, params->t_bits);
 
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
 #ifdef DEBUG
-    print_sage_u_vector("encrypt_rho: v", v, params->mu);
+    print_sage_u_vector("r5_cpa_pke_encrypt: v", v, params->mu);
 #endif
-    print_hex("encrypt_rho: m1", m1, len_m1, 1);
+    print_hex("r5_cpa_pke_encrypt: m1", m1, len_m1, 1);
 #endif
 
     free(sigma);
@@ -383,7 +383,7 @@ int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned
     }
     memcpy(m, m1, params->kappa_bytes);
 
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
     print_hex("r5_cpa_pke_decrypt: m", m, params->kappa_bytes, 1);
 #endif
 

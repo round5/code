@@ -28,7 +28,7 @@
  */
 
 #include "r5_cpa_pke.h"
-#include "parameters.h"
+#include "r5_parameter_sets.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,11 +68,11 @@ int r5_cca_kem_encapsulate(uint8_t *ct, uint8_t *k, const uint8_t *pk) {
     memcpy(hash_in + PARAMS_KAPPA_BYTES, pk, PARAMS_PK_SIZE);
     hash((uint8_t *) L_g_rho, 3 * PARAMS_KAPPA_BYTES, hash_in, PARAMS_KAPPA_BYTES + PARAMS_PK_SIZE, PARAMS_KAPPA_BYTES);
 
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
-    print_hex("cca_encrypt: m", m, PARAMS_KAPPA_BYTES, 1);
-    print_hex("cca_encrypt: L", L_g_rho[0], PARAMS_KAPPA_BYTES, 1);
-    print_hex("cca_encrypt: g", L_g_rho[1], PARAMS_KAPPA_BYTES, 1);
-    print_hex("cca_encrypt: rho", L_g_rho[2], PARAMS_KAPPA_BYTES, 1);
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
+    print_hex("r5_cca_kem_encapsulate: m", m, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_encapsulate: L", L_g_rho[0], PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_encapsulate: g", L_g_rho[1], PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_encapsulate: rho", L_g_rho[2], PARAMS_KAPPA_BYTES, 1);
 #endif
 
     /* Encrypt  */
@@ -118,11 +118,11 @@ int r5_cca_kem_decapsulate(uint8_t *k, const uint8_t *ct, const uint8_t *sk) {
             sk + PARAMS_KAPPA_BYTES + PARAMS_KAPPA_BYTES, PARAMS_PK_SIZE);
     hash((uint8_t *) L_g_rho_prime, 3 * PARAMS_KAPPA_BYTES, hash_in, PARAMS_KAPPA_BYTES + PARAMS_PK_SIZE, PARAMS_KAPPA_BYTES);
 
-#if defined(ROUND5_INTERMEDIATE) || defined(DEBUG)
-    print_hex("cca_decrypt: m_prime", m_prime, PARAMS_KAPPA_BYTES, 1);
-    print_hex("cca_decrypt: L_prime", L_g_rho_prime[0], PARAMS_KAPPA_BYTES, 1);
-    print_hex("cca_decrypt: g_prime", L_g_rho_prime[1], PARAMS_KAPPA_BYTES, 1);
-    print_hex("cca_decrypt: rho_prime", L_g_rho_prime[2], PARAMS_KAPPA_BYTES, 1);
+#if defined(NIST_KAT_GENERATION) || defined(DEBUG)
+    print_hex("r5_cca_kem_decapsulate: m_prime", m_prime, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_decapsulate: L_prime", L_g_rho_prime[0], PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_decapsulate: g_prime", L_g_rho_prime[1], PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_decapsulate: rho_prime", L_g_rho_prime[2], PARAMS_KAPPA_BYTES, 1);
 #endif
 
     // Encrypt m: ct' = (U',v')

@@ -30,7 +30,7 @@
 #ifndef PROBE_CM_H
 #define PROBE_CM_H
 
-#include "parameters.h"
+#include "r5_parameter_sets.h"
 
 // Size of the vector to pass to probe_cm
 #define PROBEVEC64  ((PARAMS_D + 63) / 64)

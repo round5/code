@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
- * Hayo Baan
+ * Hayo Baan, Jose Luis Torre Arce
  *
  * All rights reserved. A copyright license for redistribution and use in
  * source and binary forms, with or without modification, is hereby granted for
@@ -29,18 +29,16 @@
 
 /**
  * @file
- * Example ENCRYPT application, shows the working of the algorithm.
+ * Example KEM application, shows the working of the algorithm.
  */
 
-#include "api.h"
+#include "cca_encrypt.h"
+#include "cpa_kem.h"
+#include "rng.h"
+#include "r5_memory.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-
-#ifdef ROUND5_CCA_PKE
-
-#include "rng.h"
-#include "r5_memory.h"
 #include <string.h>
 
 #if PARAMS_TAU == 1 && PARAMS_N == 1
@@ -90,27 +88,17 @@ static void print_parameters() {
  * @return __0__ in case of success
  */
 static int example_run() {
+    int ok = 0;
+
     printf("Using API parameters:\n");
     printf("CRYPTO_SECRETKEYBYTES =%u\n", CRYPTO_SECRETKEYBYTES);
     printf("CRYPTO_PUBLICKEYBYTES =%u\n", CRYPTO_PUBLICKEYBYTES);
     printf("CRYPTO_BYTES          =%u\n", CRYPTO_BYTES);
     printf("CRYPTO_CIPHERTEXTBYTES=%u\n", CRYPTO_CIPHERTEXTBYTES);
+    printf("CRYPTO_ALGNAME        =%s\n", CRYPTO_ALGNAME);
     print_parameters();
+    printf("This set of parameters correspond to NIST security level %c.\n", CRYPTO_ALGNAME[5]);
     printf("\n");
-
-    unsigned long long ct_len, mlen;
-    const char *message = "This is the message to be encrypted.";
-    const unsigned long long message_len = strlen(message) + 1;
-
-    /* Set up message containers */
-    unsigned char *sk;
-    unsigned char *pk;
-    unsigned char *ct;
-    unsigned char *m;
-    sk = checked_malloc((size_t) (PARAMS_KAPPA_BYTES + PARAMS_KAPPA_BYTES + PARAMS_PK_SIZE));
-    pk = checked_malloc(PARAMS_PK_SIZE);
-    m = checked_malloc(message_len);
-    ct = checked_malloc((size_t) (PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES + 16) + (size_t) message_len);
 
 #if PARAMS_TAU == 1 && PARAMS_N == 1
     unsigned char seed[PARAMS_KAPPA_BYTES];
@@ -118,6 +106,19 @@ static int example_run() {
     print_hex("Generated A using seed", seed, PARAMS_KAPPA_BYTES, 1);
     create_A_fixed(seed);
 #endif
+
+#if CRYPTO_CIPHERTEXTBYTES == 0
+    unsigned long long ct_len, mlen;
+    const char *message = "This is the message to be encrypted.";
+    const unsigned long long message_len = strlen(message) + 1;
+
+    /* Set up message containers */
+    unsigned char sk[CRYPTO_SECRETKEYBYTES];
+    unsigned char pk[CRYPTO_PUBLICKEYBYTES];
+    unsigned char *m;
+    unsigned char *ct;
+    m = checked_malloc(message_len);
+    ct = checked_malloc((size_t) (CRYPTO_BYTES + message_len));
 
     /* Initiator */
     printf("Initiator sets up key pair\n");
@@ -135,21 +136,52 @@ static int example_run() {
     crypto_encrypt_open(m, &mlen, ct, ct_len, sk);
 
     printf("\n");
-    printf("Comparing decrypted message with original: length=%s, message=%s\n", message_len != mlen ? "NOT OK" : "OK", memcmp(message, m, message_len) ? "NOT OK" : "OK");
+    printf("Comparing decrypted message with original: length=%s, message=%s\n", message_len != mlen ? "NOT OK" : "OK", message_len != mlen || memcmp(message, m, message_len) ? "NOT OK" : "OK");
+    ok = message_len != mlen || memcmp(message, m, message_len);
 
     printf("\n");
     print_hex("Original Message ", (const unsigned char*) message, message_len, 1);
     print_hex("Decrypted Message", m, mlen, 1);
 
-    free(sk);
-    free(pk);
     free(ct);
     free(m);
+#else /* CRYPTO_CIPHERTEXTBYTES != 0 */
+    /* Set up message containers */
+    unsigned char sk[CRYPTO_SECRETKEYBYTES];
+    unsigned char pk[CRYPTO_PUBLICKEYBYTES];
+    unsigned char ct[CRYPTO_CIPHERTEXTBYTES];
+    unsigned char ss_i[CRYPTO_BYTES], ss_r[CRYPTO_BYTES];
 
-    return 0;
-}
+    /* Initiator */
+    printf("Initiator sets up key pair\n");
+    crypto_kem_keypair(pk, sk);
+    print_hex("PK", pk, CRYPTO_PUBLICKEYBYTES, 1);
+    print_hex("SK", sk, PARAMS_KAPPA_BYTES, 1);
+
+    /* Initiator sends his pk */
+    printf("Initiator sends his public key\n");
+
+    /* Responder */
+    printf("Responder determines shared secret, encapsulates and sends the cipher text\n");
+    crypto_kem_enc(ct, ss_r, pk);
+    print_hex("CT", ct, CRYPTO_CIPHERTEXTBYTES, 1);
+
+    /* Initiator */
+    printf("Initiator de-encapsulates cipher text and determines shared secret\n");
+    crypto_kem_dec(ss_i, ct, sk);
+
+    printf("\n");
+    printf("Comparing shared secrets: %s\n", memcmp(ss_r, ss_i, CRYPTO_BYTES) ? "NOT OK" : "OK");
+    ok = memcmp(ss_r, ss_i, CRYPTO_BYTES);
+
+    printf("\n");
+    print_hex("SharedSecret(R)", ss_r, CRYPTO_BYTES, 1);
+    print_hex("SharedSecret(I)", ss_i, CRYPTO_BYTES, 1);
 
 #endif
+
+    return ok;
+}
 
 /**
  * Main program, runs an example algorithm flow.
@@ -157,18 +189,12 @@ static int example_run() {
  * @return __0__ in case of success
  */
 int main(void) {
-#ifndef ROUND5_CCA_PKE
-    fprintf(stderr, "%s not a PKE configuration\n", CRYPTO_ALGNAME);
-    return 1;
-#else
     /* Initialize random bytes RNG */
     unsigned char entropy_input[48];
-    int i;
-    for (i = 0; i < 48; i++) {
+    for (int i = 0; i < 48; i++) {
         entropy_input[i] = (unsigned char) i;
     }
     randombytes_init(entropy_input, NULL, 256);
 
     return example_run();
-#endif
 }

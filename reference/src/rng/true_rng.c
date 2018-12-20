@@ -29,65 +29,52 @@
 
 /**
  * @file
- * Implementation of the random bytes functions.
+ * Implementation of a “true” random bytes function.
  *
- * Similar to the NIST rng implementation but uses shake256 to generate the
- * random bytes since that is faster.
+ * Uses /dev/urandom fro generating the random bytes.
  */
 
 #include "rng.h"
 
-#include <string.h>
-#include "shake.h"
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-/*******************************************************************************
- * Private data
- ******************************************************************************/
+/** Read the random bytes from /dev/urandom in blocks of 1MB (max). */
+#define MAX_URANDOM_BLOCK_SIZE 1048576
 
-/**
- * The RNG context data structure.
- */
-typedef struct {
-    shake_ctx shake_ctx; /**< The shake context */
-    uint8_t buffer[SHAKE256_RATE]; /**< Buffer for output. */
-    size_t index; /**< Current index in buffer. */
-} rng_ctx;
-
-/**
- * The context for the RNG.
- */
-static rng_ctx ctx;
-
-/*******************************************************************************
- * Public functions
- ******************************************************************************/
+/** The file descriptor of /dev/urandom, -1 means uninitialised  */
+static int fd = -1;
 
 void randombytes_init(unsigned char *entropy_input, unsigned char *personalization_string, int security_strength) {
-    unsigned char seed_material[48];
+    (void) entropy_input;
+    (void) personalization_string;
     (void) security_strength;
 
-    memcpy(seed_material, entropy_input, 48);
-    if (personalization_string) {
-        for (int i = 0; i < 48; i++) {
-            seed_material[i] ^= personalization_string[i];
-        }
+    /* Open /dev/urandom (if not already done) */
+    while (fd == -1) {
+        fd = open("/dev/urandom", O_RDONLY);
+        if (fd == -1) sleep(1); /* Wait a bit before retrying */
     }
-    shake256_init(&ctx.shake_ctx);
-    shake256_absorb(&ctx.shake_ctx, seed_material, 48);
-    ctx.index = SHAKE256_RATE;
 }
 
-int randombytes(unsigned char *x, unsigned long long xlen) {
-    size_t i, j;
-
-    i = ctx.index;
-    for (j = 0; j < xlen; j++) {
-        if (i >= SHAKE256_RATE) {
-            shake256_squeezeblocks(&ctx.shake_ctx, ctx.buffer, 1);
-            i = 0;
-        }
-        x[j] = ctx.buffer[i++];
+int randombytes(unsigned char *r, unsigned long long n) {
+    if (fd == -1) {
+        randombytes_init(NULL, NULL, 0);
     }
-    ctx.index = i;
+
+    /* Get the random bytes in chunks */
+    ssize_t s;
+    while (n > 0) {
+        s = read(fd, r, (size_t) (n < MAX_URANDOM_BLOCK_SIZE ? n : MAX_URANDOM_BLOCK_SIZE));
+        if (s < 1) {
+            sleep(1); /* Wait a bit before retrying */
+        } else {
+            /* Move to next chunk */
+            r += s;
+            n -= (unsigned long long) s;
+        }
+    }
+
     return 0;
 }

@@ -2,79 +2,8 @@
 #
 # Makefile for the Round5 implementations.
 #
-# The following make variables can be used to influence the build of the
-# implementations.
-#
-# * ALG:
-#
-#   With this variable, the algorithm implemented by the NIST api is
-#   specified. Can be one of R5ND_1KEM_0c, R5ND_1PKE_0c, R5ND_3KEM_0c,
-#   R5ND_3PKE_0c, R5ND_5KEM_0c, R5ND_5PKE_0c, R5ND_1KEM_5c,
-#   R5ND_1PKE_5c, etc. The default is R5ND_1KEM_0c.
-#
-# * ALG_TYPE:
-#
-#   Alternative to specifying ALG. Specifies the algorithm type (ND or N1)
-#   implemented by the NIST api. The default is ND.
-#
-# * NIST_LEVEL:
-#
-#   Alternative to specifying ALG. Specifies the NIST level implemented by
-#   the NIST api. Can be 1, 3, or 5. The default is 1.
-#
-# * KEM_PKE:
-#
-#   Alternative to specifying ALG. Specifies the type of algorithm
-#   implemented by the NIST api. Can be KEM or PKE. The default
-#   is KEM.
-#
-# * XEF:
-#
-#   Alternative to specifying ALG. When defined, specifies the error correction
-#   variants of the parameter sets should be used (e.g. R5ND_1KEM_5c will be
-#   used instead of R5ND_1KEM_0c).
-#
-# * TAU:
-#
-#   Specifies the value of the TAU parameter (0, 1, or 2), i.e. the method for
-#   the generation of A.
-#
-#   This option compiles all sources with -DROUND5_API_TAU=<TAU>.
-#
-# * AES:
-#
-#   When set to anything other than the empty string or 0, this specifies that
-#   the deterministic random values should be generated using AES in CTR mode
-#   on “zero” input blocks (with the key equal to the seed) instead of using
-#   the default method (i.e. Shake).  The AES method can be faster, especially
-#   on platforms with a well optimized OpenSSL AES implementation.
-#
-#   This option compiles all sources with -DUSE_AES_DRBG.
-#
-# * NO_OPENSSL_SHAKE:
-#
-#   When OpenSSL 1.1.1 (or later) is installed, the default is to make use of
-#   OpenSSL's Shake implementation. Set this variable to anything other than
-#   the empty string to disable the use of OpenSSL's Shake.
-#
-#   This option compiles all sources with -DNO_OPENSSL_SHAKE.
-#
-# * DEBUG:
-#
-#   When set to anything other than the empty string, this variable enables the
-#   debug build of the implementation. The debug build generates additional
-#   debugging output when run.
-#
-#   This option compiles all sources with -DDEBUG and debug
-#   symbols. Compiler optimizations are turned off.
-#
-# * CFLAGS:
-#
-#   Additional C compiler flags. Can be used to specify additional options.
-#   For instance CFLAGS=-DCM_CACHE enables the cache attack countermeasures
-#   in the tiny implementation and CFLAGS=-DROUND5_INTERMEDIATE enables the
-#   generation of intermediate output (used when generating KAT files, much
-#   less verbose than DEBUG).
+# Please see main README.md file for an explanation of the make variables that
+# can be used to specify the build behaviour.
 #
 ################################################################################
 
@@ -127,14 +56,19 @@ objdir    = $(builddir)/.o
 depdir    = $(builddir)/.d
 docdir    = doc
 
-srcs     := $(wildcard $(srcdir)/*.c) $(wildcard $(srcdir)/examples/*.c)
+# RNG depends on KAT-generation setting
+ifdef NIST_KAT_GENERATION
+    rngsrc = $(srcdir)/rng/nist_rng.c
+else
+    rngsrc = $(srcdir)/rng/true_rng.c
+endif
+rngobj   := $(rngsrc:$(srcdir)/%.c=$(objdir)/%.o)
+
+srcs     := $(wildcard $(srcdir)/*.c) $(rngsrc) $(wildcard $(srcdir)/examples/*.c)
 objs     := $(srcs:$(srcdir)/%.c=$(objdir)/%.o)
 
 examples := $(patsubst $(srcdir)/examples/%.c, $(builddir)/%, $(wildcard $(srcdir)/examples/*.c))
 
-ifeq (tiny,$(implementation))
-    tests := $(patsubst $(srcdir)/tests/%.c, $(builddir)/%, $(wildcard $(srcdir)/tests/*.c))
-endif
 
 ################################################################################
 # Compiler Setup ###############################################################
@@ -161,6 +95,16 @@ ifdef AES
     override CFLAGS += -DUSE_AES_DRBG
 endif
 
+# Generating NIST KATs?
+ifdef NIST_KAT_GENERATION
+    override CFLAGS += -DNIST_KAT_GENERATION
+endif
+
+# Enable cache attack counter measures?
+ifdef CM_CACHE
+    override CFLAGS += -DCM_CACHE
+endif
+
 # If debug is specified, compile differently
 ifndef DEBUG
     override CFLAGS += -march=native -mtune=native -O3 -fomit-frame-pointer -fwrapv
@@ -181,7 +125,7 @@ LDLIBS     += -lcrypto -lkeccak -lm
 ################################################################################
 
 # Builds the example/test applications
-build: $(examples) $(tests) createAfixed
+build: $(examples) createAfixed
 
 # Builds all, including docs
 all: build doc
@@ -249,10 +193,10 @@ clean-doc:
 # Object Creation ##############################################################
 ################################################################################
 
-# Special rule for tiny tests
-$(objdir)/tests/test_%.o: $(srcdir)/tests/test_%.c $(depdir)/tests/test_%.d
+# Special rule for nist_rng.c
+$(objdir)/%/nist_rng.o: $(srcdir)/%/nist_rng.c $(depdir)/%/nist_rng.d
 	@mkdir -p $(dir $@) $(patsubst $(objdir)/%, $(depdir)/%,$(dir $@))
-	$(CC) $(filter-out -std=c99 -pedantic,$(CFLAGS)) $(DEPFLAGS) -c $< -o $@
+	$(CC) $(filter-out -W%, $(CFLAGS)) $(DEPFLAGS) -c $< -o $@
 	@$(POSTCOMPILE)
 
 # Basic rule for standard object files
@@ -267,24 +211,23 @@ $(objdir)/%.o: $(srcdir)/%.c $(depdir)/%.d
 
 ifneq (tiny,$(implementation))
 # createAfixed for reference/optimized
-$(builddir)/createAfixed: $(objdir)/parameters.o $(objdir)/r5_parameter_sets.o $(objdir)/rng.o $(objdir)/drbg.o $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shake.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
+$(builddir)/createAfixed: $(objdir)/parameters.o $(objdir)/r5_parameter_sets.o $(rngobj) $(objdir)/drbg.o $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shake.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
 	$(CC) $(LDFLAGS) $^ $(LOADLIBS) $(LDLIBS) -o $@
 else ifeq (1,$(TAU))
 # createAfixed for tiny with tau=1
-$(builddir)/createAfixed: $(objdir)/rng.o $(objdir)/drbg.o $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shake.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
+$(builddir)/createAfixed: $(rngobj) $(objdir)/drbg.o $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shake.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
 	$(CC) $(LDFLAGS) $^ $(LOADLIBS) $(LDLIBS) -o $@
 endif
 
 # Template for building executables
 define exe_template
-$(1): $$(patsubst $(builddir)/%,$(objdir)/$(2)/%.o,$(1)) $(filter-out $(objdir)/tests/%.o $(objdir)/examples/%.o, $(objs))
+$(1): $$(patsubst $(builddir)/%,$(objdir)/$(2)/%.o,$(1)) $(filter-out $(objdir)/examples/%.o, $(objs))
 	@mkdir -p $(dir $$@)
 	$(CC) $(LDFLAGS) $$^ $(LOADLIBS) $(LDLIBS) -o $$@
 endef
 
 $(foreach exe,$(examples),$(eval $(call exe_template,$(exe),examples)))
 
-$(foreach exe,$(tests),$(eval $(call exe_template,$(exe),tests)))
 
 ################################################################################
 # Dependency Creation and Inclusion ############################################

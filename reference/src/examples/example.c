@@ -39,6 +39,7 @@
 #include <getopt.h>
 
 #include "r5_cpa_kem.h"
+#include "r5_cca_pke.h"
 #include "misc.h"
 #include "r5_memory.h"
 #include "parameters.h"
@@ -69,9 +70,9 @@ static void print_parameters(const parameters *params) {
     printf("q          = %u\n", (unsigned) params->q);
     printf("p_bits     = %u\n", (unsigned) params->p_bits);
     printf("t_bits     = %u\n", (unsigned) params->t_bits);
+    printf("b_bits     = %u\n", (unsigned) params->b_bits);
     printf("n̅ (n_bar)  = %u\n", (unsigned) params->n_bar);
     printf("m̅ (m_bar)  = %u\n", (unsigned) params->m_bar);
-    printf("b_bits     = %u\n", (unsigned) params->b_bits);
     if (params->f) {
         printf("f          = %u\n", (unsigned) params->f);
         printf("xe         = %u\n", (unsigned) params->xe);
@@ -93,13 +94,9 @@ static void print_parameters(const parameters *params) {
  * @return __0__ in case of success
  */
 static int example_run(int api_set_number, uint8_t tau) {
+    int is_pke = 0;
+    int ok = 0;
     parameters * params, non_api_params;
-    /* Set up message containers */
-    unsigned char *sk;
-    unsigned char *pk;
-    unsigned char *ct;
-    unsigned char *ss_i;
-    unsigned char *ss_r;
 
     /* Set up parameters */
     if (api_set_number < 0) {
@@ -114,7 +111,8 @@ static int example_run(int api_set_number, uint8_t tau) {
         printf("CRYPTO_CIPHERTEXTBYTES=%u\n", CRYPTO_CIPHERTEXTBYTES);
         printf("CRYPTO_ALGNAME        =%s\n", CRYPTO_ALGNAME);
         print_parameters(params);
-        printf("This set of parameters correspond to NIST security level %c.\n", CRYPTO_ALGNAME[12]);
+        printf("This set of parameters correspond to NIST security level %c.\n", CRYPTO_ALGNAME[5]);
+        is_pke = CRYPTO_CIPHERTEXTBYTES == 0;
     } else {
         params = &non_api_params;
         set_parameters(params,
@@ -135,6 +133,7 @@ static int example_run(int api_set_number, uint8_t tau) {
         printf("Using api set %d parameters (Round5 %s)\n", api_set_number, r5_parameter_set_names[api_set_number]);
         print_parameters(params);
         printf("This set of parameters correspond to NIST security level %c.\n", r5_parameter_set_names[api_set_number][5]);
+        is_pke = r5_parameter_sets[api_set_number][API_CIPHER] == 0;
     }
     if (params->tau == 1) {
         unsigned char *seed = checked_malloc(params->kappa_bytes);
@@ -145,51 +144,92 @@ static int example_run(int api_set_number, uint8_t tau) {
     }
     printf("\n");
 
-    /* Set up message containers */
-    sk = checked_malloc(get_crypto_secret_key_bytes(params, 1));
-    pk = checked_malloc(get_crypto_public_key_bytes(params));
-    ct = checked_malloc(get_crypto_cipher_text_bytes(params, 0, 0));
-    ss_i = checked_malloc(get_crypto_bytes(params, 0));
-    ss_r = checked_malloc(get_crypto_bytes(params, 0));
+    if (is_pke) {
+        unsigned long long ct_len, m_len;
+        const char *message = "This is the message to be encrypted.";
+        const unsigned long long message_len = strlen(message) + 1;
 
-    /* Initiator */
-    printf("Initiator sets up key pair\n");
-    r5_cpa_kem_keygen_p(pk, sk, params);
-    print_hex("PK", pk, params->pk_size, 1);
-    print_hex("SK", sk, params->kappa_bytes, 1);
+        /* Set up message containers */
+        unsigned char *sk = checked_malloc(get_crypto_secret_key_bytes(params, 1));
+        unsigned char *pk = checked_malloc(get_crypto_public_key_bytes(params));
+        unsigned char *m = checked_malloc(message_len);
+        unsigned char *ct = checked_malloc((get_crypto_bytes(params, 1) + message_len));
 
-    /* Initiator sends his pk */
-    printf("Initiator sends his public key\n");
+        /* Initiator */
+        printf("Initiator sets up key pair\n");
+        r5_cca_pke_keygen_p(pk, sk, params);
 
-    /* Responder */
-    printf("Responder determines shared secret, encapsulates and sends the cipher text\n");
-    r5_cpa_kem_encapsulate_p(ct, ss_r, pk, params);
-    print_hex("CT", ct, params->ct_size, 1);
+        /* Initiator sends his pk */
+        printf("Initiator sends his public key\n");
 
-    /* Initiator */
-    printf("Initiator de-encapsulates cipher text and determines shared secret\n");
-    r5_cpa_kem_decapsulate_p(ss_i, ct, sk, params);
+        /* Responder */
+        printf("Responder encrypts message with public key and sends the cipher text\n");
+        r5_cca_pke_encrypt_p(ct, &ct_len, (const unsigned char *) message, message_len, pk, params);
 
-    printf("\n");
-    printf("Comparing shared secrets: %s\n", memcmp(ss_r, ss_i, params->kappa_bytes) ? "NOT OK" : "OK");
+        /* Initiator */
+        printf("Initiator decrypts cipher text with its secret key and determines the original message\n");
+        r5_cca_pke_decrypt_p(m, &m_len, ct, ct_len, sk, params);
 
-    printf("\n");
-    print_hex("SharedSecret(R)", ss_r, params->kappa_bytes, 1);
-    print_hex("SharedSecret(I)", ss_i, params->kappa_bytes, 1);
+        printf("\n");
+        printf("Comparing decrypted message with original: length=%s, message=%s\n", message_len != m_len ? "NOT OK" : "OK", message_len != m_len || memcmp(message, m, message_len) ? "NOT OK" : "OK");
+        ok = message_len != m_len || memcmp(message, m, message_len);
 
-    free(sk);
-    free(pk);
-    free(ct);
-    free(ss_i);
-    free(ss_r);
+        printf("\n");
+        print_hex("Original Message ", (const unsigned char*) message, message_len, 1);
+        print_hex("Decrypted Message", m, m_len, 1);
 
-    return 0;
+        free(sk);
+        free(pk);
+        free(ct);
+        free(m);
+    } else {
+        /* Set up message containers */
+        unsigned char *sk = checked_malloc(get_crypto_secret_key_bytes(params, 1));
+        unsigned char *pk = checked_malloc(get_crypto_public_key_bytes(params));
+        unsigned char *ct = checked_malloc(get_crypto_cipher_text_bytes(params, 0, 0));
+        unsigned char *ss_i = checked_malloc(get_crypto_bytes(params, 0));
+        unsigned char *ss_r = checked_malloc(get_crypto_bytes(params, 0));
+
+        /* Initiator */
+        printf("Initiator sets up key pair\n");
+        r5_cpa_kem_keygen_p(pk, sk, params);
+        print_hex("PK", pk, params->pk_size, 1);
+        print_hex("SK", sk, params->kappa_bytes, 1);
+
+        /* Initiator sends his pk */
+        printf("Initiator sends his public key\n");
+
+        /* Responder */
+        printf("Responder determines shared secret, encapsulates and sends the cipher text\n");
+        r5_cpa_kem_encapsulate_p(ct, ss_r, pk, params);
+        print_hex("CT", ct, params->ct_size, 1);
+
+        /* Initiator */
+        printf("Initiator de-encapsulates cipher text and determines shared secret\n");
+        r5_cpa_kem_decapsulate_p(ss_i, ct, sk, params);
+
+        printf("\n");
+        printf("Comparing shared secrets: %s\n", memcmp(ss_r, ss_i, params->kappa_bytes) ? "NOT OK" : "OK");
+        ok = memcmp(ss_r, ss_i, params->kappa_bytes);
+
+        printf("\n");
+        print_hex("SharedSecret(R)", ss_r, params->kappa_bytes, 1);
+        print_hex("SharedSecret(I)", ss_i, params->kappa_bytes, 1);
+
+        free(sk);
+        free(pk);
+        free(ct);
+        free(ss_i);
+        free(ss_r);
+    }
+
+    return ok;
 }
 
 /**
  * Main program, runs an example algorithm flow on a set of parameters as
  * specified either by the NIST API macros definitions or from the specified
- * api parameter set (from `api_to_internal_parameters.h`). The variant for
+ * api parameter set (from `r5_parameter_sets`). The variant for
  * the creation of matrix A (tau) can also be specified.
  *
  * @param argc the number of command-line arguments (including the executable itself)
@@ -199,27 +239,33 @@ static int example_run(int api_set_number, uint8_t tau) {
 int main(int argc, char **argv) {
     /* Initialize random bytes RNG */
     unsigned char entropy_input[48];
-    int i;
-    for (i = 0; i < 48; i++) {
+    for (int i = 0; i < 48; i++) {
         entropy_input[i] = (unsigned char) i;
     }
     randombytes_init(entropy_input, NULL, 256);
 
-    long number;
     int ch;
-    const long max_api_set_number = (long) (sizeof (r5_parameter_sets) / sizeof (r5_parameter_sets[0]));
-    int api_set_number = 0;
+    long number;
+    const long max_api_set_number = (long) (sizeof (r5_parameter_set_names) / sizeof (r5_parameter_set_names[0]));
+    int api_set_number = -1;
     uint8_t tau = ROUND5_API_TAU;
 
     while ((ch = getopt(argc, argv, "a:t:")) != -1) {
         switch (ch) {
             case 'a':
-                number = strtol(optarg, NULL, 10);
-                if (number < -1 || number >= max_api_set_number) {
-                    fprintf(stderr, "%s Invalid api set number specified: %s, must be less than %lu\n", argv[0], optarg, max_api_set_number);
+                do {
+                    ++api_set_number;
+                } while (api_set_number < max_api_set_number && strcmp(r5_parameter_set_names[api_set_number], optarg));
+                if (api_set_number >= max_api_set_number) {
+                    fprintf(stderr, "%s Invalid api set name \"%s\" specified, must be one of:", argv[0], optarg);
+                    for (long i = 0; i < max_api_set_number; ++i) {
+                        if (i) {
+                            printf(",");
+                        }
+                        printf(" %s", r5_parameter_set_names[i]);
+                    }
                     exit(EXIT_FAILURE);
                 }
-                api_set_number = (int) number;
                 break;
             case 't':
                 number = strtol(optarg, NULL, 10);
@@ -237,10 +283,9 @@ int main(int argc, char **argv) {
     argc -= optind;
     argv += optind;
     if (argc > 0) {
-        fprintf(stderr, "Usage: %s [-a N] [-t N]\n", argv[0]);
+        fprintf(stderr, "Usage: %s [-a <PARAMETER_SET_NAME>] [-t N]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    example_run(api_set_number, tau);
-    return 0;
+    return example_run(api_set_number, tau);
 }
