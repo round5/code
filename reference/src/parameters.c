@@ -1,30 +1,5 @@
 /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
- * Hayo Baan, Jose Luis Torre Arce
- *
- * All rights reserved. A copyright license for redistribution and use in
- * source and binary forms, with or without modification, is hereby granted for
- * non-commercial, experimental, research, public review and evaluation
- * purposes, provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -35,10 +10,10 @@
 #include "parameters.h"
 #include "misc.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 
 /*******************************************************************************
  * Private variables & functions
@@ -57,80 +32,6 @@ static parameters api_params;
  * -1 when the `api_params` have not yet been initialized.
  */
 static int api_params_set_number = -1;
-
-#ifdef DEBUG
-
-/**
- * Checks the parameters that have been set.
- *
- * @param[in] params the algorithm parameters to check
- * @return __0__ if everything is correct, error code otherwise
- */
-static int check_parameters(const parameters *params) {
-    /* n must be either d or 1 and both must be > 0 */
-    if (params->n == 0 || params->d == 0 || !(params->n == params->d || params->n == 1)) {
-        fprintf(stderr, "Error: Incorrect parameters. ");
-        fprintf(stderr, "n and d must be non zero and n must be equal to d or 1.\n");
-        fprintf(stderr, "n=%u, d=%u\n", params->n, params->d);
-        return 1;
-    }
-    /* Hamming weight must be even, > 0, and < d */
-    if (params->h == 0 || params->h > params->d || params->h & 1) {
-        fprintf(stderr, "Error: Incorrect parameter. ");
-        fprintf(stderr, "Hamming weight h must be even, greater than, 0, and smaller than d.\n");
-        fprintf(stderr, "h=%u, d=%u\n", params->h, params->d);
-        return 2;
-    }
-    /* p, q, and t must be > 0 */
-    /* q must be a power of 2 */
-    /* p must be < q and a power of 2 */
-    /* t must be < p */
-    if (params->q_bits == 0 || params->p_bits == 0 || params->t_bits == 0 || ((uint32_t) (1 << params->p_bits)) >= params->q || params->t_bits >= params->p_bits) {
-        fprintf(stderr, "Error: Incorrect parameters. ");
-        fprintf(stderr, "q and p must be a power of 2, p must be smaller than q, t_bits must be less than p_bits\n");
-        fprintf(stderr, "p_bits=%u, q_bits=%u, p=%u, q=%u, t_bits=%u\n", params->p_bits, params->q_bits, params->p, params->q, params->t_bits);
-        return 3;
-    }
-    /* Dimensions must be > 0 */
-    if (params->n_bar == 0 || params->m_bar == 0) {
-        fprintf(stderr, "Error: Incorrect parameters. ");
-        fprintf(stderr, "Dimensions n_bar and m_bar must be greater than 0.\n");
-        fprintf(stderr, "n_bar=%u, m_bar=%u\n", params->n_bar, params->m_bar);
-        return 4;
-    }
-    /* b_bits must be > 0, < p */
-    if (params->b_bits == 0 || params->b_bits >= params->p_bits) {
-        fprintf(stderr, "Error: Incorrect parameter. ");
-        fprintf(stderr, "b_bits must be greater than 0, smaller than p_bits.\n");
-        fprintf(stderr, "b_bits=%u\n", params->b_bits);
-        return 5;
-    }
-    /* Seed size must be > 0 */
-    if (params->kappa_bytes == 0) {
-        fprintf(stderr, "Error: Incorrect parameter. ");
-        fprintf(stderr, "Seed size must be greater than 0.\n");
-        fprintf(stderr, "kappa_bytes=%u\n", params->kappa_bytes);
-        return 6;
-    }
-
-    /* tau must be 0, 1, or 2 for non-ring, 0 for ring */
-    if (params->k == 1 && params->tau != 0) {
-        fprintf(stderr, "Error: Incorrect parameter. ");
-        fprintf(stderr, "tau must be 0 for ring parameter sets\n");
-        fprintf(stderr, "tau=%u\n", params->tau);
-        return 7;
-    }
-    if (params->k != 1 && params->tau > 2) {
-        fprintf(stderr, "Error: Incorrect parameter. ");
-        fprintf(stderr, "tau must be 0, 1, or 2 for non-ring parameter sets\n");
-        fprintf(stderr, "tau=%u\n", params->tau);
-        return 7;
-    }
-
-    return 0;
-}
-
-#endif
 
 /*******************************************************************************
  * Public functions
@@ -193,7 +94,7 @@ parameters *set_parameters_from_api() {
     f = (uint8_t) r5_parameter_sets[api_params_set_number][POS_F];
     xe = (uint8_t) r5_parameter_sets[api_params_set_number][POS_XE];
 
-    err = set_parameters(&api_params, ROUND5_API_TAU, kappa_bytes, d, n, h, q_bits, p_bits, t_bits, b_bits, n_bar, m_bar, f, xe);
+    err = set_parameters(&api_params, ROUND5_API_TAU, ROUND5_API_TAU2_LEN, kappa_bytes, d, n, h, q_bits, p_bits, t_bits, b_bits, n_bar, m_bar, f, xe);
 
 #ifdef DEBUG
     if (!err) {
@@ -202,32 +103,32 @@ parameters *set_parameters_from_api() {
         const int is_encrypt = CRYPTO_CIPHERTEXTBYTES == 0;
         if (CRYPTO_SECRETKEYBYTES != get_crypto_secret_key_bytes(&api_params, is_cca || is_encrypt)) {
             if (is_cca || is_encrypt) {
-                fprintf(stderr, "NIST parameters do not match: CRYPTO_SECRETKEYBYTES(%u) != sk_size(%u) + kappa_bytes(%u) + pk_size(%u) = %u\n",
+                DEBUG_ERROR("NIST parameters do not match: CRYPTO_SECRETKEYBYTES(%u) != sk_size(%u) + kappa_bytes(%u) + pk_size(%u) = %u\n",
                         CRYPTO_SECRETKEYBYTES, api_params.kappa_bytes, api_params.kappa_bytes, api_params.pk_size, get_crypto_secret_key_bytes(&api_params, is_cca || is_encrypt));
             } else {
-                fprintf(stderr, "NIST parameters do not match: CRYPTO_SECRETKEYBYTES(%u) != sk_size(%u)\n", CRYPTO_SECRETKEYBYTES, get_crypto_secret_key_bytes(&api_params, is_cca || is_encrypt));
+                DEBUG_ERROR("NIST parameters do not match: CRYPTO_SECRETKEYBYTES(%u) != sk_size(%u)\n", CRYPTO_SECRETKEYBYTES, get_crypto_secret_key_bytes(&api_params, is_cca || is_encrypt));
             }
             err += 2;
         }
         if (CRYPTO_PUBLICKEYBYTES != get_crypto_public_key_bytes(&api_params)) {
-            fprintf(stderr, "NIST parameters do not match: CRYPTO_PUBLICKEYBYTES(%u) != pk_size(%u)\n", CRYPTO_PUBLICKEYBYTES, api_params.pk_size);
+            DEBUG_ERROR("NIST parameters do not match: CRYPTO_PUBLICKEYBYTES(%u) != pk_size(%u)\n", CRYPTO_PUBLICKEYBYTES, api_params.pk_size);
             err += 4;
         }
         if (CRYPTO_BYTES != get_crypto_bytes(&api_params, is_encrypt)) {
             if (is_encrypt) {
-                fprintf(stderr, "NIST parameters do not match: CRYPTO_BYTES(%u) != ct_size(%u) + kappa_bytes(%u) + 16 = %u\n", CRYPTO_BYTES, api_params.ct_size, api_params.kappa_bytes, get_crypto_bytes(&api_params, is_encrypt));
+                DEBUG_ERROR("NIST parameters do not match: CRYPTO_BYTES(%u) != ct_size(%u) + kappa_bytes(%u) + 16 = %u\n", CRYPTO_BYTES, api_params.ct_size, api_params.kappa_bytes, get_crypto_bytes(&api_params, is_encrypt));
             } else {
-                fprintf(stderr, "NIST parameters do not match: CRYPTO_BYTES(%u) != kappa_bytes(%u)\n", CRYPTO_BYTES, get_crypto_bytes(&api_params, is_encrypt));
+                DEBUG_ERROR("NIST parameters do not match: CRYPTO_BYTES(%u) != kappa_bytes(%u)\n", CRYPTO_BYTES, get_crypto_bytes(&api_params, is_encrypt));
             }
             err += 8;
         }
         if (CRYPTO_CIPHERTEXTBYTES != get_crypto_cipher_text_bytes(&api_params, is_cca, is_encrypt)) {
             if (is_encrypt) {
-                fprintf(stderr, "NIST parameters do not match: CRYPTO_CIPHERTEXTBYTES(%u) != %u\n", CRYPTO_CIPHERTEXTBYTES, get_crypto_cipher_text_bytes(&api_params, is_cca, is_encrypt));
+                DEBUG_ERROR("NIST parameters do not match: CRYPTO_CIPHERTEXTBYTES(%u) != %u\n", CRYPTO_CIPHERTEXTBYTES, get_crypto_cipher_text_bytes(&api_params, is_cca, is_encrypt));
             } else if (is_cca) {
-                fprintf(stderr, "NIST parameters do not match: CRYPTO_CIPHERTEXTBYTES(%u) != ct_size(%u) + kappa_bytes(%u) = %u\n", CRYPTO_CIPHERTEXTBYTES, api_params.ct_size, api_params.kappa_bytes, get_crypto_cipher_text_bytes(&api_params, is_cca, is_encrypt));
+                DEBUG_ERROR("NIST parameters do not match: CRYPTO_CIPHERTEXTBYTES(%u) != ct_size(%u) + kappa_bytes(%u) = %u\n", CRYPTO_CIPHERTEXTBYTES, api_params.ct_size, api_params.kappa_bytes, get_crypto_cipher_text_bytes(&api_params, is_cca, is_encrypt));
             } else {
-                fprintf(stderr, "NIST parameters do not match: CRYPTO_CIPHERTEXTBYTES(%u) != ct_size(%u)\n", CRYPTO_CIPHERTEXTBYTES, get_crypto_cipher_text_bytes(&api_params, is_cca, is_encrypt));
+                DEBUG_ERROR("NIST parameters do not match: CRYPTO_CIPHERTEXTBYTES(%u) != ct_size(%u)\n", CRYPTO_CIPHERTEXTBYTES, get_crypto_cipher_text_bytes(&api_params, is_cca, is_encrypt));
             }
             err += 16;
         }
@@ -243,7 +144,7 @@ parameters *set_parameters_from_api() {
 
 }
 
-int set_parameters(parameters *params, const uint8_t tau, const uint8_t kappa_bytes, const uint16_t d, const uint16_t n, const uint16_t h, const uint8_t q_bits, const uint8_t p_bits, const uint8_t t_bits, const uint8_t b_bits, const uint16_t n_bar, const uint16_t m_bar, const uint8_t f, const uint8_t xe) {
+int set_parameters(parameters *params, const uint8_t tau, const uint32_t tau2_len, const uint8_t kappa_bytes, const uint16_t d, const uint16_t n, const uint16_t h, const uint8_t q_bits, const uint8_t p_bits, const uint8_t t_bits, const uint8_t b_bits, const uint16_t n_bar, const uint16_t m_bar, const uint8_t f, const uint8_t xe) {
     params->kappa_bytes = kappa_bytes;
     params->d = d;
     params->n = n;
@@ -277,16 +178,44 @@ int set_parameters(parameters *params, const uint8_t tau, const uint8_t kappa_by
     params->h2 = (uint16_t) (1 << (params->q_bits - params->z_bits - 1));
     params->h3 = (uint16_t) ((uint16_t) (1 << (params->p_bits - params->t_bits - 1)) + (uint16_t) (1 << (params->p_bits - params->b_bits - 1)) - (uint16_t) (1 << (params->q_bits - params->z_bits - 1)));
 
+    /* n must be either d or 1 and both must be > 0 */
+    assert(params->n != 0 && params->d != 0 && (params->n == params->d || params->n == 1));
+    /* Hamming weight must be even, > 0, and < d */
+    assert(params->h != 0 && params->h <= params->d && !(params->h & 1));
+    /* p, q, and t must be > 0 and power of 2 */
+    /* p must be < q */
+    /* t must be < p */
+    assert(params->q_bits > 0 && params->p_bits > 0 && params->t_bits > 0 && params->p_bits < params->q_bits && params->t_bits < params->p_bits);
+    /* Dimensions must be > 0 */
+    assert(params->n_bar > 0 && params->m_bar > 0);
+    /* b must be > 0, < p */
+    assert(params->b_bits > 0 && params->b_bits < params->p_bits);
+    /* Seed size must be > 0 */
+    assert(params->kappa_bytes > 0);
+
     /* tau */
     set_parameter_tau(params, tau);
 
-#ifdef DEBUG
-    return check_parameters(params);
-#else
+    /* tau2 length */
+    set_parameter_tau2_len(params, tau2_len);
+
     return 0;
-#endif
 }
 
 void set_parameter_tau(parameters *params, const uint8_t tau) {
     params->tau = params->k == 1 ? 0 : tau;
+
+    /* tau must be 0, 1, or 2 for non-ring, 0 for ring (but this is actually already enforced) */
+    assert(params->tau <= 2 && (params->k != 1 || params->tau == 0));
+}
+
+void set_parameter_tau2_len(parameters *params, const uint32_t tau2_len) {
+    if (tau2_len == 0) {
+        params->tau2_len = 1 << 11;
+    } else {
+        params->tau2_len = tau2_len;
+    }
+
+    /* For non-ring, tau2_len must be a power of two and larger than or equal to d */
+    assert(params->k == 1 || (params->tau2_len >= params->d && (params->tau2_len & (params->tau2_len - 1)) == 0));
 }

@@ -1,30 +1,5 @@
 /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
- * Hayo Baan
- *
- * All rights reserved. A copyright license for redistribution and use in
- * source and binary forms, with or without modification, is hereby granted for
- * non-commercial, experimental, research, public review and evaluation
- * purposes, provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -34,6 +9,7 @@
 
 #include "r5_dem.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,20 +28,17 @@ int round5_dem(unsigned char *c2, unsigned long long *c2_len, const unsigned cha
     int result = 1;
     int len;
     int c2length;
-    EVP_CIPHER_CTX *ctx;
+    EVP_CIPHER_CTX *ctx = NULL;
     unsigned char final_key_iv[32 + 12];
     unsigned char tag[16];
     const unsigned char * const iv = final_key_iv + key_len;
 
     /* Hash key to obtain final key and IV */
-    if (key_len > 32) {
-        fprintf(stderr, "Error: Invalid key length %u.\n", key_len);
-        exit(EXIT_FAILURE);
-    }
+    assert(key_len == 32 || key_len == 24 || key_len == 16);
     hash(final_key_iv, (size_t) (key_len + 12), key, key_len, key_len);
 
     /* Initialise AES GCM */
-    int res;
+    int res = 1;
     switch (key_len) {
         case 16:
             res = !(ctx = EVP_CIPHER_CTX_new()) || (EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, final_key_iv, iv) != 1);
@@ -76,33 +49,30 @@ int round5_dem(unsigned char *c2, unsigned long long *c2_len, const unsigned cha
         case 32:
             res = !(ctx = EVP_CIPHER_CTX_new()) || (EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, final_key_iv, iv) != 1);
             break;
-        default:
-            fprintf(stderr, "Error: Invalid key length %u.\n", key_len);
-            exit(EXIT_FAILURE);
     }
     if (res) {
-        fprintf(stderr, "Failed to initialise encryption engine\n");
+        DEBUG_ERROR("Failed to initialise encryption engine\n");
         goto done_dem;
     }
     EVP_CIPHER_CTX_set_padding(ctx, 0); /* Disable padding */
 
     /* Encrypt message into c2 */
     if (EVP_EncryptUpdate(ctx, c2, &len, m, (int) m_len) != 1) {
-        fprintf(stderr, "Failed to encrypt\n");
+        DEBUG_ERROR("Failed to encrypt\n");
         goto done_dem;
     }
     c2length = len;
 
     /* Finalise encrypt */
     if (EVP_EncryptFinal_ex(ctx, c2 + c2length, &len) != 1) {
-        fprintf(stderr, "Failed to finalise encrypt\n");
+        DEBUG_ERROR("Failed to finalise encrypt\n");
         goto done_dem;
     }
     c2length += len;
 
     /* Get tag */
     if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag) != 1) {
-        fprintf(stderr, "Failed to get tag\n");
+        DEBUG_ERROR("Failed to get tag\n");
         goto done_dem;
     }
 
@@ -136,23 +106,20 @@ int round5_dem_inverse(unsigned char *m, unsigned long long *m_len, const unsign
      * Note that this is should already have been checked when calling this
      * function, so this is just an additional sanity check. */
     if (c2_len < 16) {
-        fprintf(stderr, "Invalid DEM message length: %llu < 16\n", c2_len);
+        DEBUG_ERROR("Invalid DEM message length: %llu < 16\n", c2_len);
         *m_len = 0;
         goto done_dem_inverse;
     }
 
     /* Hash key to obtain final key and IV */
-    if (key_len > 32) {
-        fprintf(stderr, "Error: Invalid key length %u.\n", key_len);
-        exit(EXIT_FAILURE);
-    }
+    assert(key_len == 32 || key_len == 24 || key_len == 16);
     hash(final_key_iv, (size_t) (key_len + 12), key, key_len, key_len);
 
     /* Get tag */
     memcpy(tag, c2 + c2_len_no_tag, 16);
 
     /* Initialise AES GCM */
-    int res;
+    int res = 1;
     switch (key_len) {
         case 16:
             res = !(ctx = EVP_CIPHER_CTX_new()) || (EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), NULL, final_key_iv, iv) != 1);
@@ -163,13 +130,10 @@ int round5_dem_inverse(unsigned char *m, unsigned long long *m_len, const unsign
         case 32:
             res = !(ctx = EVP_CIPHER_CTX_new()) || (EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, final_key_iv, iv) != 1);
             break;
-        default:
-            fprintf(stderr, "Error: Invalid key length %u.\n", key_len);
-            exit(EXIT_FAILURE);
     }
     if (res) {
-        fprintf(stderr, "Failed to initialise encryption engine\n");
-        goto done_dem_inverse;
+        DEBUG_ERROR("Failed to initialise encryption engine\n");
+        abort();
     }
     EVP_CIPHER_CTX_set_padding(ctx, 0); /* Disable padding */
 
@@ -182,7 +146,7 @@ int round5_dem_inverse(unsigned char *m, unsigned long long *m_len, const unsign
         tmp_m = checked_malloc(c2_len_no_tag);
     }
     if (EVP_DecryptUpdate(ctx, tmp_m, &len, c2, (int) c2_len_no_tag) != 1) {
-        fprintf(stderr, "Failed to decrypt\n");
+        DEBUG_ERROR("Failed to decrypt\n");
         goto done_dem_inverse;
     }
     if (tmp_m != m) {
@@ -194,14 +158,14 @@ int round5_dem_inverse(unsigned char *m, unsigned long long *m_len, const unsign
 
     /* Set expected tag value  */
     if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag)) {
-        fprintf(stderr, "Failed to set expected tag\n");
+        DEBUG_ERROR("Failed to set expected tag\n");
         goto done_dem_inverse;
     }
 
     /* Finalise decrypt */
     int ret = EVP_DecryptFinal_ex(ctx, m + m_length, &len);
     if (ret < 0) {
-        fprintf(stderr, "Failed to finalise decrypt: %d\n", ret);
+        DEBUG_ERROR("Failed to finalise decrypt: %d\n", ret);
         goto done_dem_inverse;
     }
 

@@ -6,7 +6,7 @@
 # CPATH/LIBRARY_PATH!
 
 # Setup directories
-implementations = reference tiny
+implementations = reference configurable optimized
 clean_implementations = $(addprefix clean-,$(implementations))
 doc_implementations = $(addprefix doc-,$(implementations))
 
@@ -14,10 +14,10 @@ build: $(implementations)
 
 all: build doc
 
-speedtest:
-	@./runSpeedTests
 
 doc: $(doc_implementations)
+
+
 
 clean: $(clean_implementations)
 
@@ -27,7 +27,9 @@ $(implementations):
 $(doc_implementations):
 	@$(MAKE) -C $(patsubst doc-%,%,$@) doc
 
+
+
 $(clean_implementations):
 	@$(MAKE) -C $(patsubst clean-%,%,$@) clean
 
-.PHONY: build all $(implementations) speedtest clean $(clean_implementations) doc $(doc_implementations)
+.PHONY: build all $(implementations) doc $(doc_implementations) clean $(clean_implementations)

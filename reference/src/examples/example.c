@@ -1,30 +1,5 @@
 /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
- * Hayo Baan, Jose Luis Torre Arce
- *
- * All rights reserved. A copyright license for redistribution and use in
- * source and binary forms, with or without modification, is hereby granted for
- * non-commercial, experimental, research, public review and evaluation
- * purposes, provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -83,6 +58,9 @@ static void print_parameters(const parameters *params) {
     printf("pk_size    = %u\n", (unsigned) params->pk_size);
     printf("ct_size    = %u\n", (unsigned) params->ct_size);
     printf("tau        = %u\n", (unsigned) params->tau);
+    if (params->tau == 2) {
+        printf("tau2_len   = %u\n", (unsigned) params->tau2_len);
+    }
 }
 
 /**
@@ -101,7 +79,8 @@ static int example_run(int api_set_number, uint8_t tau) {
     /* Set up parameters */
     if (api_set_number < 0) {
         if ((params = set_parameters_from_api()) == NULL) {
-            exit(1);
+            fprintf(stderr, "example: Invalid parameters\n");
+            exit(EXIT_FAILURE);
         }
         set_parameter_tau(params, tau); // Even when using the API values, we still allow setting tau
         printf("Using API parameters:\n");
@@ -115,8 +94,9 @@ static int example_run(int api_set_number, uint8_t tau) {
         is_pke = CRYPTO_CIPHERTEXTBYTES == 0;
     } else {
         params = &non_api_params;
-        set_parameters(params,
+        if (set_parameters(params,
                 tau,
+                0,
                 (uint8_t) r5_parameter_sets[api_set_number][POS_KAPPA_BYTES],
                 (uint16_t) r5_parameter_sets[api_set_number][POS_D],
                 (uint16_t) r5_parameter_sets[api_set_number][POS_N],
@@ -128,7 +108,10 @@ static int example_run(int api_set_number, uint8_t tau) {
                 (uint16_t) r5_parameter_sets[api_set_number][POS_N_BAR],
                 (uint16_t) r5_parameter_sets[api_set_number][POS_M_BAR],
                 (uint8_t) r5_parameter_sets[api_set_number][POS_F],
-                (uint8_t) r5_parameter_sets[api_set_number][POS_XE]);
+                (uint8_t) r5_parameter_sets[api_set_number][POS_XE])) {
+            fprintf(stderr, "example: Invalid parameters\n");
+            exit(EXIT_FAILURE);
+        }
 
         printf("Using api set %d parameters (Round5 %s)\n", api_set_number, r5_parameter_set_names[api_set_number]);
         print_parameters(params);
@@ -157,18 +140,18 @@ static int example_run(int api_set_number, uint8_t tau) {
 
         /* Initiator */
         printf("Initiator sets up key pair\n");
-        r5_cca_pke_keygen_p(pk, sk, params);
+        r5_cca_pke_keygen(pk, sk, params);
 
         /* Initiator sends his pk */
         printf("Initiator sends his public key\n");
 
         /* Responder */
         printf("Responder encrypts message with public key and sends the cipher text\n");
-        r5_cca_pke_encrypt_p(ct, &ct_len, (const unsigned char *) message, message_len, pk, params);
+        r5_cca_pke_encrypt(ct, &ct_len, (const unsigned char *) message, message_len, pk, params);
 
         /* Initiator */
         printf("Initiator decrypts cipher text with its secret key and determines the original message\n");
-        r5_cca_pke_decrypt_p(m, &m_len, ct, ct_len, sk, params);
+        r5_cca_pke_decrypt(m, &m_len, ct, ct_len, sk, params);
 
         printf("\n");
         printf("Comparing decrypted message with original: length=%s, message=%s\n", message_len != m_len ? "NOT OK" : "OK", message_len != m_len || memcmp(message, m, message_len) ? "NOT OK" : "OK");
@@ -192,7 +175,7 @@ static int example_run(int api_set_number, uint8_t tau) {
 
         /* Initiator */
         printf("Initiator sets up key pair\n");
-        r5_cpa_kem_keygen_p(pk, sk, params);
+        r5_cpa_kem_keygen(pk, sk, params);
         print_hex("PK", pk, params->pk_size, 1);
         print_hex("SK", sk, params->kappa_bytes, 1);
 
@@ -201,12 +184,12 @@ static int example_run(int api_set_number, uint8_t tau) {
 
         /* Responder */
         printf("Responder determines shared secret, encapsulates and sends the cipher text\n");
-        r5_cpa_kem_encapsulate_p(ct, ss_r, pk, params);
+        r5_cpa_kem_encapsulate(ct, ss_r, pk, params);
         print_hex("CT", ct, params->ct_size, 1);
 
         /* Initiator */
         printf("Initiator de-encapsulates cipher text and determines shared secret\n");
-        r5_cpa_kem_decapsulate_p(ss_i, ct, sk, params);
+        r5_cpa_kem_decapsulate(ss_i, ct, sk, params);
 
         printf("\n");
         printf("Comparing shared secrets: %s\n", memcmp(ss_r, ss_i, params->kappa_bytes) ? "NOT OK" : "OK");
@@ -264,6 +247,7 @@ int main(int argc, char **argv) {
                         }
                         printf(" %s", r5_parameter_set_names[i]);
                     }
+                    printf("\n");
                     exit(EXIT_FAILURE);
                 }
                 break;

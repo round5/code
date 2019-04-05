@@ -1,30 +1,5 @@
 /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
- * Hayo Baan, Jose Luis Torre Arce
- *
- * All rights reserved. A copyright license for redistribution and use in
- * source and binary forms, with or without modification, is hereby granted for
- * non-commercial, experimental, research, public review and evaluation
- * purposes, provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -191,6 +166,7 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     int16_t *R;
     int16_t *R_T;
     uint16_t *U;
+    uint16_t *U_T;
     uint16_t *B;
     uint16_t *B_T;
     uint16_t *X;
@@ -218,6 +194,7 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     R = checked_malloc(len_r * sizeof (*R));
     R_T = checked_malloc(len_r * sizeof (*R_T));
     U = checked_malloc(len_u * sizeof (*U));
+    U_T = checked_malloc(len_u * sizeof (*U_T));
     B = checked_malloc(len_b * sizeof (*B));
     B_T = checked_malloc(len_b * sizeof (*B_T));
     X = checked_malloc(len_x * sizeof (*X));
@@ -242,6 +219,7 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     /* U = A^T * R */
     mult_matrix(U, (int16_t *) A_T, params->k, params->k, R, params->k, params->m_bar, params->n, params->q, 0);
 
+
 #ifdef DEBUG
     print_hex("r5_cpa_pke_encrypt: m", m, params->kappa_bytes, 1);
 #endif
@@ -251,13 +229,16 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
 #ifdef DEBUG
     print_sage_u_vector_matrix("r5_cpa_pke_encrypt: A", A, params->k, params->k, params->n);
     print_sage_u_vector_matrix("r5_cpa_pke_encrypt: B", B, params->k, params->n_bar, params->n);
-    print_sage_s_vector_matrix("r5_cpa_pke_encrypt: R_T", R_T, params->k, params->m_bar, params->n);
+    print_sage_s_vector_matrix("r5_cpa_pke_encrypt: R_T", R_T, params->m_bar, params->k, params->n);
     print_sage_u_vector_matrix("r5_cpa_pke_encrypt: uncompressed U", U, params->k, params->m_bar, params->n);
 #endif
 #endif
 
     /* Compress U q_bits -> p_bits with flooring */
     round_matrix(U, (size_t) (params->k * params->m_bar), params->n, params->q_bits, params->p_bits, params->h2);
+
+    /* Transpose U */
+    transpose_matrix(U_T, U, params->k, params->m_bar, params->n);
 
     /* Transpose B */
     transpose_matrix(B_T, B, params->k, params->n_bar, params->n);
@@ -281,8 +262,11 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     /* Add message (mod t) */
     add_msg(v, params->mu, X, m1, params->b_bits, params->t_bits);
 
+    /* Transpose U */
+    transpose_matrix(U_T, U, params->k, params->m_bar, params->n);
+
     /* Pack ciphertext */
-    pack_ct(ct, U, len_u, params->p_bits, v, params->mu, params->t_bits);
+    pack_ct(ct, U_T, len_u, params->p_bits, v, params->mu, params->t_bits);
 
 #if defined(NIST_KAT_GENERATION) || defined(DEBUG)
 #ifdef DEBUG
@@ -297,6 +281,7 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     free(R);
     free(R_T);
     free(U);
+    free(U_T);
     free(B);
     free(B_T);
     free(X);
@@ -310,6 +295,7 @@ int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned
     /* Matrices, vectors, bit strings */
     int16_t *S_T;
     uint16_t *U;
+    uint16_t *U_T;
     uint16_t *v;
     uint16_t *X_prime;
     uint16_t *m2;
@@ -327,6 +313,7 @@ int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned
 
     S_T = checked_malloc(len_s * sizeof (*S_T));
     U = checked_malloc(len_u * sizeof (*U));
+    U_T = checked_malloc(len_u * sizeof (*U));
     v = checked_malloc(params->mu * sizeof (*v));
     X_prime = checked_malloc(len_x_prime * sizeof (*X_prime));
     m2 = checked_malloc(params->mu * sizeof (*m2));
@@ -339,7 +326,10 @@ int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned
     create_S_T(S_T, sk, params);
 
     /* Unpack cipher text */
-    unpack_ct(U, v, ct, len_u, params->p_bits, params->mu, params->t_bits);
+    unpack_ct(U_T, v, ct, len_u, params->p_bits, params->mu, params->t_bits);
+
+    /* Transpose U^T */
+    transpose_matrix(U, U_T, params->m_bar, params->k, params->n);
 
 #ifdef DEBUG
     print_sage_u_vector_matrix("r5_cpa_pke_decrypt: compressed U", U, params->k, params->m_bar, params->n);
@@ -349,7 +339,7 @@ int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned
     /* Decompress v t -> p */
     decompress_matrix(v, params->mu, 1, params->t_bits, params->p_bits);
 
-    /* X' = U * S == S_T * U */
+    /* X' = S^T * U */
     mult_matrix(X_prime, S_T, params->n_bar, params->k, (int16_t *) U, params->k, params->m_bar, params->n, params->p, params->xe != 0 || params->f != 0);
 
 #ifdef DEBUG
@@ -389,6 +379,7 @@ int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned
 
     free(S_T);
     free(U);
+    free(U_T);
     free(v);
     free(X_prime);
     free(m2);

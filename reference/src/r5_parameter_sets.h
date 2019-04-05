@@ -1,30 +1,5 @@
 /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
- * Hayo Baan, Jose Luis Torre Arce, Sauvik Bhattacharya
- *
- * All rights reserved. A copyright license for redistribution and use in
- * source and binary forms, with or without modification, is hereby granted for
- * non-commercial, experimental, research, public review and evaluation
- * purposes, provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -77,132 +52,132 @@
 #define POS_XE         15
 
 /* NIST API Round5 parameter set definitions */
-#if defined(R5ND_1KEM_0c)
+#if defined(R5ND_1KEM_0d)
 #define ROUND5_API_SET 0
 #define CRYPTO_SECRETKEYBYTES 16
 #define CRYPTO_PUBLICKEYBYTES 634
 #define CRYPTO_BYTES 16
 #define CRYPTO_CIPHERTEXTBYTES 682
-#define CRYPTO_ALGNAME "R5ND_1KEM_0c"
-#elif defined(R5ND_3KEM_0c)
+#define CRYPTO_ALGNAME "R5ND_1KEM_0d"
+#elif defined(R5ND_3KEM_0d)
 #define ROUND5_API_SET 1
 #define CRYPTO_SECRETKEYBYTES 24
 #define CRYPTO_PUBLICKEYBYTES 909
 #define CRYPTO_BYTES 24
 #define CRYPTO_CIPHERTEXTBYTES 981
-#define CRYPTO_ALGNAME "R5ND_3KEM_0c"
-#elif defined(R5ND_5KEM_0c)
+#define CRYPTO_ALGNAME "R5ND_3KEM_0d"
+#elif defined(R5ND_5KEM_0d)
 #define ROUND5_API_SET 2
 #define CRYPTO_SECRETKEYBYTES 32
 #define CRYPTO_PUBLICKEYBYTES 1178
 #define CRYPTO_BYTES 32
 #define CRYPTO_CIPHERTEXTBYTES 1274
-#define CRYPTO_ALGNAME "R5ND_5KEM_0c"
-#elif defined(R5ND_1PKE_0c)
+#define CRYPTO_ALGNAME "R5ND_5KEM_0d"
+#elif defined(R5ND_1PKE_0d)
 #define ROUND5_API_SET 3
 #define CRYPTO_SECRETKEYBYTES 708
 #define CRYPTO_PUBLICKEYBYTES 676
 #define CRYPTO_BYTES 756
 #define CRYPTO_CIPHERTEXTBYTES 0
-#define CRYPTO_ALGNAME "R5ND_1PKE_0c"
-#elif defined(R5ND_3PKE_0c)
+#define CRYPTO_ALGNAME "R5ND_1PKE_0d"
+#elif defined(R5ND_3PKE_0d)
 #define ROUND5_API_SET 4
 #define CRYPTO_SECRETKEYBYTES 1031
 #define CRYPTO_PUBLICKEYBYTES 983
 #define CRYPTO_BYTES 1119
 #define CRYPTO_CIPHERTEXTBYTES 0
-#define CRYPTO_ALGNAME "R5ND_3PKE_0c"
-#elif defined(R5ND_5PKE_0c)
+#define CRYPTO_ALGNAME "R5ND_3PKE_0d"
+#elif defined(R5ND_5PKE_0d)
 #define ROUND5_API_SET 5
 #define CRYPTO_SECRETKEYBYTES 1413
 #define CRYPTO_PUBLICKEYBYTES 1349
 #define CRYPTO_BYTES 1525
 #define CRYPTO_CIPHERTEXTBYTES 0
-#define CRYPTO_ALGNAME "R5ND_5PKE_0c"
-#elif defined(R5ND_1KEM_5c)
+#define CRYPTO_ALGNAME "R5ND_5PKE_0d"
+#elif defined(R5ND_1KEM_5d)
 #define ROUND5_API_SET 6
 #define CRYPTO_SECRETKEYBYTES 16
 #define CRYPTO_PUBLICKEYBYTES 445
 #define CRYPTO_BYTES 16
 #define CRYPTO_CIPHERTEXTBYTES 549
-#define CRYPTO_ALGNAME "R5ND_1KEM_5c"
-#elif defined(R5ND_3KEM_5c)
+#define CRYPTO_ALGNAME "R5ND_1KEM_5d"
+#elif defined(R5ND_3KEM_5d)
 #define ROUND5_API_SET 7
 #define CRYPTO_SECRETKEYBYTES 24
 #define CRYPTO_PUBLICKEYBYTES 780
 #define CRYPTO_BYTES 24
 #define CRYPTO_CIPHERTEXTBYTES 859
-#define CRYPTO_ALGNAME "R5ND_3KEM_5c"
-#elif defined(R5ND_5KEM_5c)
+#define CRYPTO_ALGNAME "R5ND_3KEM_5d"
+#elif defined(R5ND_5KEM_5d)
 #define ROUND5_API_SET 8
 #define CRYPTO_SECRETKEYBYTES 32
 #define CRYPTO_PUBLICKEYBYTES 972
 #define CRYPTO_BYTES 32
 #define CRYPTO_CIPHERTEXTBYTES 1063
-#define CRYPTO_ALGNAME "R5ND_5KEM_5c"
-#elif defined(R5ND_1PKE_5c)
+#define CRYPTO_ALGNAME "R5ND_5KEM_5d"
+#elif defined(R5ND_1PKE_5d)
 #define ROUND5_API_SET 9
 #define CRYPTO_SECRETKEYBYTES 493
 #define CRYPTO_PUBLICKEYBYTES 461
 #define CRYPTO_BYTES 636
 #define CRYPTO_CIPHERTEXTBYTES 0
-#define CRYPTO_ALGNAME "R5ND_1PKE_5c"
-#elif defined(R5ND_3PKE_5c)
+#define CRYPTO_ALGNAME "R5ND_1PKE_5d"
+#elif defined(R5ND_3PKE_5d)
 #define ROUND5_API_SET 10
 #define CRYPTO_SECRETKEYBYTES 828
 #define CRYPTO_PUBLICKEYBYTES 780
 #define CRYPTO_BYTES 950
 #define CRYPTO_CIPHERTEXTBYTES 0
-#define CRYPTO_ALGNAME "R5ND_3PKE_5c"
-#elif defined(R5ND_5PKE_5c)
+#define CRYPTO_ALGNAME "R5ND_3PKE_5d"
+#elif defined(R5ND_5PKE_5d)
 #define ROUND5_API_SET 11
-#define CRYPTO_SECRETKEYBYTES 1036
-#define CRYPTO_PUBLICKEYBYTES 972
-#define CRYPTO_BYTES 1172
+#define CRYPTO_SECRETKEYBYTES 1042
+#define CRYPTO_PUBLICKEYBYTES 978
+#define CRYPTO_BYTES 1301
 #define CRYPTO_CIPHERTEXTBYTES 0
-#define CRYPTO_ALGNAME "R5ND_5PKE_5c"
-#elif defined(R5N1_1KEM_0c)
+#define CRYPTO_ALGNAME "R5ND_5PKE_5d"
+#elif defined(R5N1_1KEM_0d)
 #define ROUND5_API_SET 12
 #define CRYPTO_SECRETKEYBYTES 16
 #define CRYPTO_PUBLICKEYBYTES 5214
 #define CRYPTO_BYTES 16
 #define CRYPTO_CIPHERTEXTBYTES 5236
-#define CRYPTO_ALGNAME "R5N1_1KEM_0c"
-#elif defined(R5N1_3KEM_0c)
+#define CRYPTO_ALGNAME "R5N1_1KEM_0d"
+#elif defined(R5N1_3KEM_0d)
 #define ROUND5_API_SET 13
 #define CRYPTO_SECRETKEYBYTES 24
 #define CRYPTO_PUBLICKEYBYTES 8834
 #define CRYPTO_BYTES 24
 #define CRYPTO_CIPHERTEXTBYTES 8866
-#define CRYPTO_ALGNAME "R5N1_3KEM_0c"
-#elif defined(R5N1_5KEM_0c)
+#define CRYPTO_ALGNAME "R5N1_3KEM_0d"
+#elif defined(R5N1_5KEM_0d)
 #define ROUND5_API_SET 14
 #define CRYPTO_SECRETKEYBYTES 32
 #define CRYPTO_PUBLICKEYBYTES 14264
 #define CRYPTO_BYTES 32
 #define CRYPTO_CIPHERTEXTBYTES 14288
-#define CRYPTO_ALGNAME "R5N1_5KEM_0c"
-#elif defined(R5N1_1PKE_0c)
+#define CRYPTO_ALGNAME "R5N1_5KEM_0d"
+#elif defined(R5N1_1PKE_0d)
 #define ROUND5_API_SET 15
 #define CRYPTO_SECRETKEYBYTES 5772
 #define CRYPTO_PUBLICKEYBYTES 5740
 #define CRYPTO_BYTES 5804
 #define CRYPTO_CIPHERTEXTBYTES 0
-#define CRYPTO_ALGNAME "R5N1_1PKE_0c"
-#elif defined(R5N1_3PKE_0c)
+#define CRYPTO_ALGNAME "R5N1_1PKE_0d"
+#elif defined(R5N1_3PKE_0d)
 #define ROUND5_API_SET 16
 #define CRYPTO_SECRETKEYBYTES 9708
 #define CRYPTO_PUBLICKEYBYTES 9660
 #define CRYPTO_BYTES 9732
 #define CRYPTO_CIPHERTEXTBYTES 0
-#define CRYPTO_ALGNAME "R5N1_3PKE_0c"
-#elif defined(R5N1_5PKE_0c)
+#define CRYPTO_ALGNAME "R5N1_3PKE_0d"
+#elif defined(R5N1_5PKE_0d)
 #define ROUND5_API_SET 17
 #define CRYPTO_SECRETKEYBYTES 14700
 #define CRYPTO_PUBLICKEYBYTES 14636
 #define CRYPTO_BYTES 14724
 #define CRYPTO_CIPHERTEXTBYTES 0
-#define CRYPTO_ALGNAME "R5N1_5PKE_0c"
+#define CRYPTO_ALGNAME "R5N1_5PKE_0d"
 #elif defined(R5ND_0KEM_2iot)
 #define ROUND5_API_SET 18
 #define CRYPTO_SECRETKEYBYTES 16
@@ -645,7 +620,7 @@
 #define CRYPTO_CIPHERTEXTBYTES 764
 #define CRYPTO_ALGNAME "R5ND_0KEM_xfail_ntru_29"
 #else
-#error You must define one of: R5ND_1KEM_0c, R5ND_3KEM_0c, R5ND_5KEM_0c, R5ND_1PKE_0c, R5ND_3PKE_0c, R5ND_5PKE_0c, R5ND_1KEM_5c, R5ND_3KEM_5c, R5ND_5KEM_5c, R5ND_1PKE_5c, R5ND_3PKE_5c, R5ND_5PKE_5c, R5N1_1KEM_0c, R5N1_3KEM_0c, R5N1_5KEM_0c, R5N1_1PKE_0c, R5N1_3PKE_0c, R5N1_5PKE_0c, R5ND_0KEM_2iot, R5ND_1KEM_4longkey, R5N1_3PKE_0smallCT, R5ND_0KEM_0fail_phi_0, R5ND_0KEM_0fail_phi_1, R5ND_0KEM_0fail_phi_2, R5ND_0KEM_0fail_phi_3, R5ND_0KEM_0fail_phi_4, R5ND_0KEM_0fail_phi_5, R5ND_0KEM_0fail_phi_6, R5ND_0KEM_0fail_phi_7, R5ND_0KEM_0fail_phi_8, R5ND_0KEM_0fail_phi_9, R5ND_0KEM_0fail_phi_10, R5ND_0KEM_0fail_phi_11, R5ND_0KEM_0fail_phi_12, R5ND_0KEM_0fail_phi_13, R5ND_0KEM_0fail_phi_14, R5ND_0KEM_0fail_phi_15, R5ND_0KEM_0fail_phi_16, R5ND_0KEM_0fail_phi_17, R5ND_0KEM_0fail_phi_18, R5ND_0KEM_0fail_phi_19, R5ND_0KEM_0fail_phi_20, R5ND_0KEM_0fail_phi_21, R5ND_0KEM_0fail_phi_22, R5ND_0KEM_0fail_phi_23, R5ND_0KEM_0fail_phi_24, R5ND_0KEM_0fail_phi_25, R5ND_0KEM_0fail_phi_26, R5ND_0KEM_0fail_phi_27, R5ND_0KEM_0fail_phi_28, R5ND_0KEM_0fail_phi_29, R5ND_0KEM_xfail_ntru_0, R5ND_0KEM_xfail_ntru_1, R5ND_0KEM_xfail_ntru_2, R5ND_0KEM_xfail_ntru_3, R5ND_0KEM_xfail_ntru_4, R5ND_0KEM_xfail_ntru_5, R5ND_0KEM_xfail_ntru_6, R5ND_0KEM_xfail_ntru_7, R5ND_0KEM_xfail_ntru_8, R5ND_0KEM_xfail_ntru_9, R5ND_0KEM_xfail_ntru_10, R5ND_0KEM_xfail_ntru_11, R5ND_0KEM_xfail_ntru_12, R5ND_0KEM_xfail_ntru_13, R5ND_0KEM_xfail_ntru_14, R5ND_0KEM_xfail_ntru_15, R5ND_0KEM_xfail_ntru_16, R5ND_0KEM_xfail_ntru_17, R5ND_0KEM_xfail_ntru_18, R5ND_0KEM_xfail_ntru_19, R5ND_0KEM_xfail_ntru_20, R5ND_0KEM_xfail_ntru_21, R5ND_0KEM_xfail_ntru_22, R5ND_0KEM_xfail_ntru_23, R5ND_0KEM_xfail_ntru_24, R5ND_0KEM_xfail_ntru_25, R5ND_0KEM_xfail_ntru_26, R5ND_0KEM_xfail_ntru_27, R5ND_0KEM_xfail_ntru_28, R5ND_0KEM_xfail_ntru_29.
+#error You must define one of: R5ND_1KEM_0d, R5ND_3KEM_0d, R5ND_5KEM_0d, R5ND_1PKE_0d, R5ND_3PKE_0d, R5ND_5PKE_0d, R5ND_1KEM_5d, R5ND_3KEM_5d, R5ND_5KEM_5d, R5ND_1PKE_5d, R5ND_3PKE_5d, R5ND_5PKE_5d, R5N1_1KEM_0d, R5N1_3KEM_0d, R5N1_5KEM_0d, R5N1_1PKE_0d, R5N1_3PKE_0d, R5N1_5PKE_0d, R5ND_0KEM_2iot, R5ND_1KEM_4longkey, R5N1_3PKE_0smallCT, R5ND_0KEM_0fail_phi_0, R5ND_0KEM_0fail_phi_1, R5ND_0KEM_0fail_phi_2, R5ND_0KEM_0fail_phi_3, R5ND_0KEM_0fail_phi_4, R5ND_0KEM_0fail_phi_5, R5ND_0KEM_0fail_phi_6, R5ND_0KEM_0fail_phi_7, R5ND_0KEM_0fail_phi_8, R5ND_0KEM_0fail_phi_9, R5ND_0KEM_0fail_phi_10, R5ND_0KEM_0fail_phi_11, R5ND_0KEM_0fail_phi_12, R5ND_0KEM_0fail_phi_13, R5ND_0KEM_0fail_phi_14, R5ND_0KEM_0fail_phi_15, R5ND_0KEM_0fail_phi_16, R5ND_0KEM_0fail_phi_17, R5ND_0KEM_0fail_phi_18, R5ND_0KEM_0fail_phi_19, R5ND_0KEM_0fail_phi_20, R5ND_0KEM_0fail_phi_21, R5ND_0KEM_0fail_phi_22, R5ND_0KEM_0fail_phi_23, R5ND_0KEM_0fail_phi_24, R5ND_0KEM_0fail_phi_25, R5ND_0KEM_0fail_phi_26, R5ND_0KEM_0fail_phi_27, R5ND_0KEM_0fail_phi_28, R5ND_0KEM_0fail_phi_29, R5ND_0KEM_xfail_ntru_0, R5ND_0KEM_xfail_ntru_1, R5ND_0KEM_xfail_ntru_2, R5ND_0KEM_xfail_ntru_3, R5ND_0KEM_xfail_ntru_4, R5ND_0KEM_xfail_ntru_5, R5ND_0KEM_xfail_ntru_6, R5ND_0KEM_xfail_ntru_7, R5ND_0KEM_xfail_ntru_8, R5ND_0KEM_xfail_ntru_9, R5ND_0KEM_xfail_ntru_10, R5ND_0KEM_xfail_ntru_11, R5ND_0KEM_xfail_ntru_12, R5ND_0KEM_xfail_ntru_13, R5ND_0KEM_xfail_ntru_14, R5ND_0KEM_xfail_ntru_15, R5ND_0KEM_xfail_ntru_16, R5ND_0KEM_xfail_ntru_17, R5ND_0KEM_xfail_ntru_18, R5ND_0KEM_xfail_ntru_19, R5ND_0KEM_xfail_ntru_20, R5ND_0KEM_xfail_ntru_21, R5ND_0KEM_xfail_ntru_22, R5ND_0KEM_xfail_ntru_23, R5ND_0KEM_xfail_ntru_24, R5ND_0KEM_xfail_ntru_25, R5ND_0KEM_xfail_ntru_26, R5ND_0KEM_xfail_ntru_27, R5ND_0KEM_xfail_ntru_28, R5ND_0KEM_xfail_ntru_29.
 /** The API set implemented with the NIST API. */
 #define ROUND5_API_SET -1
 /** The number of bytes of the secret key (NIST API). */
@@ -668,6 +643,24 @@ const char *r5_parameter_set_names[81];
 #if !defined(ROUND5_API_TAU)
 /** Defines the variant tau to use for the creation of A. */
 #define ROUND5_API_TAU 0
+#endif
+
+/* Default ROUND5_API_TAU2_LEN to 2<<11 if not yet defined (or 0) */
+#if !defined(ROUND5_API_TAU2_LEN) || ROUND5_API_TAU2_LEN == 0
+#undef ROUND5_API_TAU2_LEN
+/**
+ * Defines the length of the random vector for the A matrix when A is created using TAU=2.
+ * The value 0 (the default) means that the value of parameter _2^11_ will be used.
+ *
+ * <strong>Important: this must be a power of 2 and larger than parameter _d_!</strong>
+ */
+#define ROUND5_API_TAU2_LEN (1<<11)
+#endif
+#if ROUND5_API_TAU2_LEN > (1<<31)
+#error ROUND5_API_TAU2_LEN must be less than or equal to 2^31
+#endif
+#if (ROUND5_API_TAU2_LEN & (ROUND5_API_TAU2_LEN - 1)) != 0
+#error ROUND5_API_TAU2_LEN must be a power of two
 #endif
 
 #endif /* R5_PARAMETER_SETS_H */

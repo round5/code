@@ -1,30 +1,5 @@
 /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
- * Hayo Baan, Jose Luis Torre Arce
- *
- * All rights reserved. A copyright license for redistribution and use in
- * source and binary forms, with or without modification, is hereby granted for
- * non-commercial, experimental, research, public review and evaluation
- * purposes, provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -37,6 +12,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include "misc.h"
 #include "r5_memory.h"
@@ -300,12 +276,20 @@ static int permutation_tau_1(uint32_t *row_disp, const unsigned char *seed, cons
  */
 static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed, const parameters *params) {
     uint32_t i;
+    uint16_t rnd;
+    uint8_t *v = checked_calloc(params->tau2_len, 1);
 
     drbg_init_customization(seed, params->kappa_bytes, permutation_customization, sizeof (permutation_customization));
 
     for (i = 0; i < params->k; ++i) {
-        row_disp[i] = drbg_sampler16_2(params->q);
+        do {
+            rnd = drbg_sampler16_2(params->tau2_len);
+        } while (v[rnd]);
+        v[rnd] = 1;
+        row_disp[i] = rnd;
     }
+
+    free(v);
 
     return 0;
 }
@@ -321,25 +305,20 @@ int create_A(uint16_t *A, const unsigned char *sigma, const parameters *params) 
     const uint16_t els_row = (uint16_t) (params->k * params->n);
 
     /* Create A/A_Master*/
+    assert(params->tau <= 2);
     switch (params->tau) {
         case 0:
             create_A_random(A, sigma, params);
             break;
         case 1:
-            if (A_fixed == NULL || A_fixed_len != (size_t) (params->d * params->k)) {
-                fprintf(stderr, "A_fixed has not been initialised, use e.g. create_A_fixed() to initialise it.\n");
-                exit(EXIT_FAILURE);
-            }
+            assert(A_fixed != NULL && A_fixed_len == (size_t) (params->d * params->k));
             A_master = A_fixed;
             break;
         case 2:
-            A_master = checked_malloc((size_t) (params->q + params->d) * sizeof (*A_master));
+            A_master = checked_malloc((size_t) (params->tau2_len + params->d) * sizeof (*A_master));
             create_A_random(A_master, sigma, params);
-            memcpy(A_master + params->q, A_master, params->d * sizeof (*A_master));
+            memcpy(A_master + params->tau2_len, A_master, params->d * sizeof (*A_master));
             break;
-        default:
-            fprintf(stderr, "Error: Wrong tau value for creating A: %hhu.\n", params->tau);
-            exit(EXIT_FAILURE);
     }
 
     /* Compute and apply the permutation to get A */
@@ -407,13 +386,10 @@ int create_R_T(int16_t *R_T, const unsigned char *rho, const parameters *params)
 }
 
 int mult_matrix(uint16_t *result, const int16_t *left, const size_t l_rows, const size_t l_cols, const int16_t *right, const size_t r_rows, const size_t r_cols, const size_t els, const uint32_t mod, const int isXi) {
+    assert(l_cols == r_rows);
+
     size_t i, j, k;
     uint16_t *temp_poly = checked_malloc(els * sizeof (*temp_poly));
-
-    if (l_cols != r_rows) {
-        fprintf(stderr, "Error: Inner matrix dimensions must match.\n");
-        exit(EXIT_FAILURE);
-    }
 
     /* Initialize result to zero */
     /* Note: this might not be constant-time */

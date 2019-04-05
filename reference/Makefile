@@ -14,7 +14,7 @@ implementation := $(notdir $(CURDIR))
 # Variant Setup ################################################################
 ################################################################################
 
-# The variant of the algorithm for the tiny implementation is set using the ALG
+# The variant of the algorithm for the optimized implementation is set using the ALG
 # variable. Alternatively it can also be set by specifying KEM_PKE (either KEM
 # or PKE) and/or NIST_LEVEL (1, 3, or 5). The type of the algorithm (ND, T0, T1,
 # or T2) is derived from the implementation.
@@ -38,10 +38,10 @@ endif
 
 # Set the algorithm (if none set)
 ifndef ALG
-    ALG := R5$(ALG_TYPE)_$(NIST_LEVEL)$(KEM_PKE)_0c
+    ALG := R5$(ALG_TYPE)_$(NIST_LEVEL)$(KEM_PKE)_0d
     ifdef XEF
         ifeq (ND,$(ALG_TYPE))
-            override ALG := R5$(ALG_TYPE)_$(NIST_LEVEL)$(KEM_PKE)_5c
+            override ALG := R5$(ALG_TYPE)_$(NIST_LEVEL)$(KEM_PKE)_5d
         endif
     endif
 endif
@@ -74,15 +74,26 @@ examples := $(patsubst $(srcdir)/examples/%.c, $(builddir)/%, $(wildcard $(srcdi
 # Compiler Setup ###############################################################
 ################################################################################
 
-CC          = gcc
+CC           = gcc
+
+AFLFUZZER_CC = afl-gcc
+
+LIBFUZZER_CC = clang
 
 # Compiler flags, allow to set *additional* parameters at the command-line
 override CFLAGS += -I $(srcdir) -std=c99 -pedantic -Wall -Wextra -Wconversion -Wcast-qual -Wcast-align
 
 # Define version to build
 override CFLAGS += -D$(ALG)
+
+# TAU?
 ifdef TAU
     override CFLAGS += -DROUND5_API_TAU=$(TAU)
+endif
+
+# TAU2_LEN?
+ifdef TAU2_LEN
+    override CFLAGS += -DROUND5_API_TAU2_LEN=$(TAU2_LEN)
 endif
 
 # Disable OpenSSL's Shake?
@@ -103,6 +114,16 @@ endif
 # Enable cache attack counter measures?
 ifdef CM_CACHE
     override CFLAGS += -DCM_CACHE
+endif
+
+# Enable AVX2?
+ifdef AVX2
+    override CFLAGS += -DAVX2
+endif
+
+# 64-bit shift left with variable shift amount constant-time?
+ifdef SHIFT_LEFT64_CONSTANT_TIME
+    override CFLAGS += -DSHIFT_LEFT64_CONSTANT_TIME
 endif
 
 # If debug is specified, compile differently
@@ -130,19 +151,19 @@ build: $(examples) createAfixed
 # Builds all, including docs
 all: build doc
 
-ifneq (tiny,$(implementation))
-# Builds the createAfixed application (reference/optimized)
+ifneq (optimized,$(implementation))
+# Builds the createAfixed application (reference/configurable)
 createAfixed: $(builddir)/createAfixed
 else ifeq (1,$(TAU))
-# Builds the createAfixed application (tiny with TAU = 1)
+# Builds the createAfixed application (optimized with TAU = 1)
 createAfixed: $(builddir)/createAfixed
 else
 # Dummy rule for createAfixed
 createAfixed: ;
 endif
 
-ifneq (tiny,$(implementation))
-# Updates/creates the documentation (not for tiny)
+ifneq (optimized,$(implementation))
+# Updates/creates the documentation (not for optimized)
 # An html version is built in doc/html, a LaTeX version in doc/latex
 #
 # Requires doxygen to be installed (with dot support)
@@ -150,7 +171,7 @@ ifneq (tiny,$(implementation))
 doc: Doxyfile
 	@doxygen && echo "Documentation successfully generated for $(implementation)"
 
-ifeq (optimized,$(implementation))
+ifeq (configurable,$(implementation))
 Doxyfile: ../reference/Doxyfile
 	@cat $^ | sed "s/^\(PROJECT_BRIEF.*\)reference/\1$(implementation)/" > $@
 endif
@@ -205,16 +226,17 @@ $(objdir)/%.o: $(srcdir)/%.c $(depdir)/%.d
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 	@$(POSTCOMPILE)
 
+
 ################################################################################
 # Executable Creation ##########################################################
 ################################################################################
 
-ifneq (tiny,$(implementation))
-# createAfixed for reference/optimized
+ifneq (optimized,$(implementation))
+# createAfixed for reference/configurable
 $(builddir)/createAfixed: $(objdir)/parameters.o $(objdir)/r5_parameter_sets.o $(rngobj) $(objdir)/drbg.o $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shake.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
 	$(CC) $(LDFLAGS) $^ $(LOADLIBS) $(LDLIBS) -o $@
 else ifeq (1,$(TAU))
-# createAfixed for tiny with tau=1
+# createAfixed for optimized with tau=1
 $(builddir)/createAfixed: $(rngobj) $(objdir)/drbg.o $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shake.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
 	$(CC) $(LDFLAGS) $^ $(LOADLIBS) $(LDLIBS) -o $@
 endif
@@ -227,6 +249,20 @@ $(1): $$(patsubst $(builddir)/%,$(objdir)/$(2)/%.o,$(1)) $(filter-out $(objdir)/
 endef
 
 $(foreach exe,$(examples),$(eval $(call exe_template,$(exe),examples)))
+
+
+# Fuzzers
+FUZZER_CFLAGS = $(filter-out -march=native -mtune=native -O2 -O3 -fomit-frame-pointer -fwrapv -DDEBUG -std=c99 -pedantic,$(CFLAGS)) -g -O1
+
+aflfuzzer: $(srcdir)/*.c $(rngsrc) $(srcdir)/fuzzer/fuzz_target.c
+	@mkdir -p $(builddir)
+	$(AFLFUZZER_CC) -I $(srcdir) $(FUZZER_CFLAGS) $^ $(LDFLAGS) $(LOADLIBS) $(LDLIBS) -o $(builddir)/$@
+
+libfuzzer: $(srcdir)/*.c $(rngsrc) $(srcdir)/fuzzer/fuzz_target.c
+	@mkdir -p $(builddir)
+	$(LIBFUZZER_CC) -I $(srcdir) $(FUZZER_CFLAGS) -DLIBFUZZER -fsanitize=fuzzer,address $^ $(LDFLAGS) $(LOADLIBS) $(LDLIBS) -o $(builddir)/$@
+
+.PHONY: aflfuzzer libfuzzer
 
 
 ################################################################################

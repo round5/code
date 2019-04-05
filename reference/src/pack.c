@@ -1,30 +1,5 @@
 /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
- * Hayo Baan, Jose Luis Torre Arce
- *
- * All rights reserved. A copyright license for redistribution and use in
- * source and binary forms, with or without modification, is hereby granted for
- * non-commercial, experimental, research, public review and evaluation
- * purposes, provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -134,22 +109,22 @@ size_t unpack_pk(unsigned char *sigma, uint16_t *B, const unsigned char *packed_
     return unpacked_idx;
 }
 
-size_t pack_ct(unsigned char *packed_ct, const uint16_t *U, size_t U_els, uint8_t U_bits, const uint16_t *v, size_t v_els, uint8_t v_bits) {
+size_t pack_ct(unsigned char *packed_ct, const uint16_t *U_T, size_t U_els, uint8_t U_bits, const uint16_t *v, size_t v_els, uint8_t v_bits) {
     size_t idx = 0;
 
-    /* Pack U */
-    idx += pack(packed_ct, U, U_els, U_bits);
+    /* Pack U_T */
+    idx += pack(packed_ct, U_T, U_els, U_bits);
     /* Pack v */
     idx += pack((packed_ct + idx), v, v_els, v_bits);
 
     return idx;
 }
 
-size_t unpack_ct(uint16_t *U, uint16_t *v, const unsigned char *packed_ct, const size_t U_els, const uint8_t U_bits, const size_t v_els, const uint8_t v_bits) {
+size_t unpack_ct(uint16_t *U_T, uint16_t *v, const unsigned char *packed_ct, const size_t U_els, const uint8_t U_bits, const size_t v_els, const uint8_t v_bits) {
     size_t idx = 0;
 
     /* Unpack U */
-    idx += unpack(U, packed_ct, U_els, U_bits);
+    idx += unpack(U_T, packed_ct, U_els, U_bits);
     /* Unpack v */
     idx += unpack(v, (packed_ct + idx), v_els, v_bits);
 

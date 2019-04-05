@@ -1,30 +1,5 @@
 /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
- * Hayo Baan
- *
- * All rights reserved. A copyright license for redistribution and use in
- * source and binary forms, with or without modification, is hereby granted for
- * non-commercial, experimental, research, public review and evaluation
- * purposes, provided that the following conditions are met:
- *
- * * Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright notice,
- *   this list of conditions and the following disclaimer in the documentation
- *   and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
  */
 
 /**
@@ -37,6 +12,8 @@
 
 #ifndef _SHAKE_H_
 #define _SHAKE_H_
+
+#include "misc.h"
 
 #include <stdlib.h>
 #include <stddef.h>
@@ -82,8 +59,8 @@ extern "C" {
      */
     inline void shake128_init(shake_ctx *ctx) {
         if (Keccak_HashInitialize_SHAKE128(ctx) != 0) {
-            fprintf(stderr, "Error: Failed to initialize SHAKE128 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to initialize SHAKE128 context\n");
+            abort();
         }
     }
 
@@ -96,12 +73,12 @@ extern "C" {
      */
     inline void shake128_absorb(shake_ctx *ctx, const unsigned char *input, const size_t input_len) {
         if (Keccak_HashUpdate(ctx, input, input_len * 8) != 0) {
-            fprintf(stderr, "Error: Failed to update SHAKE128 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to update SHAKE128 context\n");
+            abort();
         }
         if (Keccak_HashFinal(ctx, NULL) != 0) {
-            fprintf(stderr, "Error: Failed to finalize SHAKE128 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to finalize SHAKE128 context\n");
+            abort();
         }
     }
 
@@ -116,8 +93,8 @@ extern "C" {
      */
     inline void shake128_squeezeblocks(shake_ctx *ctx, unsigned char *output, const size_t nr_blocks) {
         if (Keccak_HashSqueeze(ctx, output, nr_blocks * SHAKE128_RATE * 8) != 0) {
-            fprintf(stderr, "Error: Failed to squeeze SHAKE128 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to squeeze SHAKE128 context\n");
+            abort();
         }
     }
 
@@ -137,8 +114,8 @@ extern "C" {
      */
     inline void shake256_init(shake_ctx *ctx) {
         if (Keccak_HashInitialize_SHAKE256(ctx) != 0) {
-            fprintf(stderr, "Error: Failed to initialize SHAKE256 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to initialize SHAKE256 context\n");
+            abort();
         }
     }
 
@@ -151,12 +128,12 @@ extern "C" {
      */
     inline void shake256_absorb(shake_ctx *ctx, const unsigned char *input, const size_t input_len) {
         if (Keccak_HashUpdate(ctx, input, input_len * 8) != 0) {
-            fprintf(stderr, "Error: Failed to update SHAKE256 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to update SHAKE256 context\n");
+            abort();
         }
         if (Keccak_HashFinal(ctx, NULL) != 0) {
-            fprintf(stderr, "Error: Failed to finalize SHAKE256 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to finalize SHAKE256 context\n");
+            abort();
         }
     }
 
@@ -171,8 +148,8 @@ extern "C" {
      */
     inline void shake256_squeezeblocks(shake_ctx *ctx, unsigned char *output, const size_t nr_blocks) {
         if (Keccak_HashSqueeze(ctx, output, nr_blocks * SHAKE256_RATE * 8) != 0) {
-            fprintf(stderr, "Error: Failed to squeeze SHAKE256 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to squeeze SHAKE256 context\n");
+            abort();
         }
     }
 
@@ -194,8 +171,8 @@ extern "C" {
      */
     inline void cshake128_init(cshake_ctx *ctx, const unsigned char *customization, const size_t customization_len) {
         if (cSHAKE128_Initialize(ctx, 0, NULL, 0, customization, customization_len * 8) != 0) {
-            fprintf(stderr, "Error: Failed to initialize cSHAKE128 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to initialize cSHAKE128 context\n");
+            abort();
         }
     }
 
@@ -208,12 +185,12 @@ extern "C" {
      */
     inline void cshake128_absorb(cshake_ctx *ctx, const unsigned char *input, const size_t input_len) {
         if (cSHAKE128_Update(ctx, input, input_len * 8) != 0) {
-            fprintf(stderr, "Error: Failed to update cSHAKE128 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to update cSHAKE128 context\n");
+            abort();
         }
         if (cSHAKE128_Final(ctx, NULL) != 0) {
-            fprintf(stderr, "Error: Failed to finalize cSHAKE128 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to finalize cSHAKE128 context\n");
+            abort();
         }
     }
 
@@ -228,8 +205,8 @@ extern "C" {
      */
     inline void cshake128_squeezeblocks(cshake_ctx *ctx, unsigned char *output, const size_t nr_blocks) {
         if (cSHAKE128_Squeeze(ctx, output, nr_blocks * SHAKE128_RATE * 8) != 0) {
-            fprintf(stderr, "Error: Failed to squeeze cSHAKE128 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to squeeze cSHAKE128 context\n");
+            abort();
         }
     }
 
@@ -244,8 +221,8 @@ extern "C" {
      */
     inline void cshake128(unsigned char *output, size_t output_len, const unsigned char *input, const size_t input_len, const unsigned char *customization, const size_t customization_len) {
         if (cSHAKE128(input, input_len * 8, output, output_len * 8, NULL, 0, customization, customization_len) != 0) {
-            fprintf(stderr, "Error: Failed to perform cSHAKE128\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to perform cSHAKE128\n");
+            abort();
         }
     }
 
@@ -258,8 +235,8 @@ extern "C" {
      */
     inline void cshake256_init(cshake_ctx *ctx, const unsigned char *customization, const size_t customization_len) {
         if (cSHAKE256_Initialize(ctx, 0, NULL, 0, customization, customization_len * 8) != 0) {
-            fprintf(stderr, "Error: Failed to initialize cSHAKE256 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to initialize cSHAKE256 context\n");
+            abort();
         }
     }
 
@@ -272,12 +249,12 @@ extern "C" {
      */
     inline void cshake256_absorb(cshake_ctx *ctx, const unsigned char *input, const size_t input_len) {
         if (cSHAKE256_Update(ctx, input, input_len * 8) != 0) {
-            fprintf(stderr, "Error: Failed to update cSHAKE256 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to update cSHAKE256 context\n");
+            abort();
         }
         if (cSHAKE256_Final(ctx, NULL) != 0) {
-            fprintf(stderr, "Error: Failed to finalize cSHAKE256 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to finalize cSHAKE256 context\n");
+            abort();
         }
     }
 
@@ -292,8 +269,8 @@ extern "C" {
      */
     inline void cshake256_squeezeblocks(cshake_ctx *ctx, unsigned char *output, const size_t nr_blocks) {
         if (cSHAKE256_Squeeze(ctx, output, nr_blocks * SHAKE256_RATE * 8) != 0) {
-            fprintf(stderr, "Error: Failed to squeeze cSHAKE256 context\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to squeeze cSHAKE256 context\n");
+            abort();
         }
     }
 
@@ -308,8 +285,8 @@ extern "C" {
      */
     inline void cshake256(unsigned char *output, size_t output_len, const unsigned char *input, const size_t input_len, const unsigned char *customization, const size_t customization_len) {
         if (cSHAKE256(input, input_len * 8, output, output_len * 8, NULL, 0, customization, customization_len) != 0) {
-            fprintf(stderr, "Error: Failed to perform cSHAKE128\n");
-            exit(EXIT_FAILURE);
+            DEBUG_ERROR("Error: Failed to perform cSHAKE128\n");
+            abort();
         }
     }
 
