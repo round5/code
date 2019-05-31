@@ -1,0 +1,62 @@
+Speedtest: Performance Measurement Application
+==============================================
+
+You can use these source files to create a Round5 performance measurement
+application. Simply follow the steps outlined below.
+
+
+Requirements
+------------
+
+To be able to build and run the speed test application, you must have the
+OpenSSL and the Keccak libraries available (please see README in the root
+directory of the submission for instructions).
+
+
+Building the speed test application
+-----------------------------------
+
+1. Put the file speedtest.c and test_utils.* files together with the source
+   files (excluding the PQCgenKAT*.c file!) from the Round5 implementation
+   variant you want to measure.
+
+   Note: for the optimized and AVX2 implementations, use speedtest_optimized.c
+   instead of speedtest.c.
+
+2. Compile using e.g.:
+
+    gcc -march=native -mtune=native -O3 -fomit-frame-pointer -fwrapv *.c -lcrypto -lkeccak -lm -o speedtest
+
+    The following build options are available
+    * To specify the value of TAU, determining the variant to use for
+      generating A in case of non-ring (N1) parameter sets, add
+      -DROUND5_API_TAU=<TAU> where <TAU> is 0, 1, or 2.
+      
+    * In case of TAU=2, the length of the a-vector is determined by the
+      ROUND5_API_TAU2_LEN macro (must be a power of 2 and larger or equal to
+      parameter d). So you can use e.g. -DROUND5_API_TAU2_LEN=4096 to set it to
+      2^12. Defaults to 2^11.
+    
+    * To use AES instead of cSHAKE for the deterministic random number
+      generator (this is faster on most modern CPUs), add -DUSE_AES_DRBG.
+
+    For the optimized implementation the following additional options are
+    available:
+    * To disable the cache attack countermeasures add -DNO_CM_CACHE.
+    
+    * To enable AVX2 optimizations, add -DAVX2 (note: the AVX2 version is also
+      cache attack resistant, this can not be diabled).
+
+      With -DAVX2, the optimized implementation is equal to the AVX2
+      implementation found under "Addtional_Implementations".
+
+    For the AVX2 and the optimized (with the cache attack countermeasures
+    enabled) implementations you can further specify
+    -DSHIFT_LEFT64_CONSTANT_TIME to indicate shift lefts with a variable amount
+    can be considered constant-time on your platform.
+
+3. Run the tests, optionally specifying the number times the tests
+   need to be repeated (-r N):
+
+   ./speedtest
+

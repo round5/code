@@ -1,0 +1,200 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Temp;
+use Cwd qw(abs_path);
+
+use lib '.';
+
+use ParameterSets;
+
+# Get options
+my $repeat = 100; # Number of test repeats
+my $runRef = 0; # Set to true to run the reference implementations
+my $runConfigurable = 0; # Set to true to run the configurable implementations
+my $noOptimized = 0; # Set to true to inhibit running the optimized implementations
+my $apiSet = -1; # Specifies the api parameter set to use for test (-1 for all)
+my $tau = -1; # Specifies the variant for the genreation of A to use (-1 for all)
+my $aes = -1; # Specifies the AES enabbled or not variant for the generation of A (-1 for both)
+my $avx2 = -1; # Specifies the AVX2 enabled or not implementation (-1 for both)
+my $fpTest = 0; # Set to true to run the high-failure probability parameter tests
+my $ignoreFailure = 0; # Set to true to ignore test failure of non high-failure probability tests
+my $noCM_CACHE = 0; # Set to true to disble CM_CACHE
+my $all = 0; # Set to true to run AES and tau variants for all algorithms, normally this is only done for R5N1_1KEM_0d
+GetOptions(
+    "repeat=i" => \$repeat,
+    "run-reference" => \$runRef,
+    "run-configurable" => \$runConfigurable,
+    "no-optimized" => \$noOptimized,
+    "no-CM_CACHE" => \$noCM_CACHE,
+    "avx2=i" => \$avx2,
+    "api-set=i" => \$apiSet,
+    "tau=i" => \$tau,
+    "high-failure" => \$fpTest,
+    "ignore-failure" => \$ignoreFailure,
+    "all" => \$all,
+    "aes=i" => \$aes,
+) or usage();
+
+my $speedTestDir = "speedtest";
+my $speedTestSrcDir = "$speedTestDir/src";
+my $speedTestBuildDir = File::Temp->newdir(CLEANUP => 0);
+
+my $gccOptions = '-DNDEBUG -O3 -march=native -mtune=native -fomit-frame-pointer -fwrapv';
+$gccOptions .= ' ' . $ENV{CFLAGS} if $ENV{CFLAGS};
+
+print "Temporary build files are in: $speedTestBuildDir\n\n";
+
+my @implementations;
+push @implementations, 'reference' if $runRef;
+push @implementations, 'configurable' if $runConfigurable;
+push @implementations, 'optimized' unless $noOptimized;
+
+gatherConfigurations();
+printf "Found %d parameter sets.\n", scalar @paramSets;
+print "Using api parameter set $apiSet\n" if $apiSet >= 0;
+print "\n";
+
+my $useCM_CACHE = '';
+my $useAVX2 = '';
+for my $implementation (@implementations) {
+    if ($implementation eq 'optimized') {
+        $useCM_CACHE = '-DCM_CACHE' unless $noCM_CACHE;
+        $useAVX2 = '', speedTest($implementation) if $avx2 < 0 || !$avx2;
+        $useAVX2 = '-DAVX2', speedTest($implementation) if $avx2 < 0 || $avx2;
+    } else {
+        $useCM_CACHE = '';
+        $useAVX2 = '';
+        speedTest($implementation);
+    }
+}
+
+# All went fine (or we chose to ignore), the build dir can be removed
+$speedTestBuildDir->unlink_on_destroy(1); # Auto remove build directory
+
+print "\nALL DONE!\n";
+
+
+################################################################################
+
+# Speed test for the specified implementation
+sub speedTest {
+    my $implementation = shift;
+
+    # createAfixed for reference/configurable
+    if ($implementation ne 'optimized') {
+        system(qq(make -C $implementation createAfixed > $speedTestBuildDir/createAfixed.log)) and die "Unable to make createAfixed for $implementation";
+    }
+
+    for my $currentApiSet (0..$#paramSets) {
+        my @paramSet = getParamSet($currentApiSet);
+
+        my $isEncrypt = $paramSet[$apiLocations{API_CIPHER}] == 0;
+        my $isNonRing = $paramSet[$apiLocations{POS_N}] == 1;
+        my $algName = getAlgNameFromParamSet(@paramSet);
+        next if $apiSet < 0 && (($fpTest && $algName !~ /fail/) || (!$fpTest && $algName =~ /fail/));
+        my $maxVariantA = $isNonRing ? 2 : 0;
+
+        my $theRepeat = $implementation eq "reference" && $isNonRing ? ($repeat / 10) : $repeat;
+        $theRepeat = 1 if ($theRepeat<1);
+        for my $variantAES (0, 1) {
+            # Skip if not included
+            next if ($apiSet >= 0 && $currentApiSet != $apiSet);
+            next if ($aes >= 0 && $variantAES != $aes);
+            next if (!$all && $aes < 0 && $variantAES && $algName !~ /R5N1_1KEM_0d$/);
+
+            my $useAES = $variantAES ? '-DUSE_AES_DRBG' : '';
+            for my $variantA (0..$maxVariantA) {
+                # Skip if not included
+                next if ($tau >=0 && $variantA != $tau);
+                next if (!$all && $tau < 0 && $variantA != ($isNonRing ? 2 : 0) && ($algName !~ /^R5N1_1KEM_0d$/ || !($variantA == 0 || !$variantAES)));
+
+                # Copy source code
+                my $sourceDir = "$implementation/src";
+                my $rng = 'nist'; # shake is fastest
+                my $speedtest = $implementation eq 'optimized' ? 'speedtest_optimized' : 'speedtest';
+                system(qq(rm -rf $speedTestBuildDir/*; cp $sourceDir/*.[ch] $speedTestBuildDir; cp $sourceDir/rng/${rng}_rng.c $speedTestBuildDir/rng.c; cp $speedTestSrcDir/$speedtest.[ch] $speedTestSrcDir/test_utils.[ch] $speedTestBuildDir;)) and die "Failed to copy source files to $speedTestBuildDir: $?";
+                if ($variantA == 1) {
+                    if ($implementation eq 'optimized') {
+                        # Generate A_fixed for optimized
+                        $sourceDir = abs_path($sourceDir);
+                        system(qq(cd $speedTestBuildDir > /dev/null; gcc -D$algName -DROUND5_API_TAU=$variantA $useAES -I. $gccOptions rng.c drbg.c misc.c a_random.c a_fixed.c r5_hash.c shake.c little_endian.c $sourceDir/createAfixed/createAfixed.c -lm -lcrypto -lkeccak -o createAfixed)) and die "Unable to build createAfixed for $algName";
+                        my $a_fixedFileName = "$speedTestBuildDir/a_fixed.c";
+                        my $a_fixedSourceFileName = "$sourceDir/a_fixed.c";
+                        my $a_fixedCode = `$speedTestBuildDir/createAfixed`;
+                        die "Failed to create A_fixed for $implementation $algName: $?" if $?;
+                        open(my $a_fixedSourceFile, '<', $a_fixedSourceFileName) or die "Unable to open $a_fixedSourceFileName";
+                        open(my $a_fixedFile, '>', $a_fixedFileName) or die "Unable to open $a_fixedFileName for writing";
+                        while (<$a_fixedSourceFile>) {
+                            if (/modq_t\s+A_fixed.*;/) {
+                                print $a_fixedFile $a_fixedCode;
+                            } else {
+                                print $a_fixedFile $_;
+                            }
+                        }
+                        close($a_fixedFile) or die "Unable to close $a_fixedFileName";
+                        close($a_fixedSourceFile) or die "Unable to close $a_fixedSourceFileName";
+                    } else {
+                        # Generate A_fixed for reference/configurable
+                        my $a_fixedFileName = "$speedTestBuildDir/a_fixed.c";
+                        my $a_fixedSourceFileName = "$sourceDir/a_fixed.c";
+                        my $a_fixedCode = `$implementation/build/createAfixed $currentApiSet`;
+                        die "Failed to create A_fixed for $implementation $algName: $?" if $?;
+                        open(my $a_fixedSourceFile, '<', $a_fixedSourceFileName) or die "Unable to open $a_fixedSourceFileName";
+                        open(my $a_fixedFile, '>', $a_fixedFileName) or die "Unable to open $a_fixedFileName for writing";
+                        while (<$a_fixedSourceFile>) {
+                            if (/size_t\s+A_fixed_len/) {
+                                print $a_fixedFile $a_fixedCode;
+                            } elsif (!/uint16_t\s+\*A_fixed/) {
+                                print $a_fixedFile $_;
+                            }
+                        }
+                        close($a_fixedFile) or die "Unable to close $a_fixedFileName";
+                        close($a_fixedSourceFile) or die "Unable to close $a_fixedSourceFileName";
+                    }
+                }
+
+                # Compile and run code
+                print "================================================================================\n";
+                printf "%.80s\n", sprintf("===== Running $implementation $algName T$variantA %s%stest ==================================================", $variantAES ? 'AES ' : '', $implementation ne 'optimized' ? '' : ($useAVX2 ? 'AVX2 ' : ($useCM_CACHE ? 'CM_CACHE ' : '')));
+                print "================================================================================\n";
+                print "\n";
+                my $result = system(qq(cd $speedTestBuildDir > /dev/null; gcc -D$algName -DROUND5_API_TAU=$variantA $useAES $useCM_CACHE $useAVX2 $gccOptions *.c -lcrypto -lkeccak -lm -o speedtest && ./speedtest -r $theRepeat));
+                if ($result) {
+                    my $failMsg = "Failed to run test $algName (API set: $currentApiSet)";
+                    if ($ignoreFailure || $algName =~ /fail/) {
+                        print STDERR "$failMsg\n";
+                    } else {
+                        die $failMsg;
+                    }
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+sub usage {
+    print STDERR<<END_USAGE;
+Usage: $0 [-ignore-failure] [-high-failure] [-run-reference] [-run-configurable] [-no-optimized] [-no-cm_cache] [-repeat <N>] [-api-set <PARAMETER SET NUMBER>] [-tau <TAU>] [-aes <AES>] [-avx2 <AVX2>] [-all]
+
+Options:
+    -repeat <N>: number of repeats
+    -api-set <PARAMETER SET NUMBER>: the parameter set to test (specify -1 for
+        all, default)
+    -tau <TAU>: the tau version (0, 1, or 2) to test (specify -1 for using the
+        default TAU versions as used in the submission documentation)
+    -aes <AES>: specifies whether to use the AES (1) or not (0) for the
+        deterministic random number generator (specify -1 for the defaults as
+        used in the submission documentation)
+    -avx2 <AVX2>: specifies whether to run the AVX2 (1) or standard (0) version
+        of the optimized implementation (specify -1 to run both, default)
+
+Note: api-set and tau start at 0.
+
+END_USAGE
+    exit 1;
+}

@@ -1,0 +1,68 @@
+Speedtest: Performance Measurement Application
+==============================================
+
+You can use these source files to create a Round5 performance measurement
+application. Simply follow the steps outlined below.
+
+Requirements
+------------
+
+To be able to build and run the speed test application, you must have the
+OpenSSL and the Keccak libraries available.
+
+
+Building the speed test application
+-----------------------------------
+
+1. Put the speedtest.c (for the optimized implementation, use
+   speedtest_optimized.c instead) and test_utils.* files together with the
+   source files from the Round5 implementation (i.e. reference, configurable,
+   or optimized) you want to measure.
+
+2. Compile using e.g.:
+
+    gcc -march=native -mtune=native -O3 -fomit-frame-pointer -fwrapv -D<VARIANT> -DROUND5_API_TAU=<TAU> *.c -lcrypto -lkeccak -lm -o speedtest
+
+    Where <VARIANT> is one of:
+    * R5ND_1KEM_0d
+    * R5ND_3KEM_0d
+    * R5ND_5KEM_0d
+    * R5ND_1PKE_0d
+    * R5ND_3PKE_0d
+    * R5ND_5PKE_0d
+    * R5ND_1KEM_5d
+    * R5ND_3KEM_5d
+    * R5ND_5KEM_5d
+    * R5ND_1PKE_5d
+    * R5ND_3PKE_5d
+    * R5ND_5PKE_5d
+    * R5ND_0KEM_2iot
+    * R5ND_1KEM_4longkey
+    * R5N1_1KEM_0d
+    * R5N1_3KEM_0d
+    * R5N1_5KEM_0d
+    * R5N1_1PKE_0d
+    * R5N1_3PKE_0d
+    * R5N1_5PKE_0d
+    * R5N1_3PKE_0smallCT
+
+    And <TAU> is one of 0, 1, or 2 (note: only for the non-ring (N1) variants).
+
+    Some additional build options:
+    * Add -DCM_CACHE or -DAVX2 to build a cache attack resistent or AVX2
+      enabled version of optimized (note: the AVX2 version is also cache attack
+      resistant).
+      
+    * With the cache attack resistant (or AVX2) enabled version of the
+      optimized implementation, you can further add
+      -DSHIFT_LEFT64_CONSTANT_TIME to indicate shift lefts with a variable
+      amount can be considered constant-time on your platform.
+
+    * To use AES instead of cSHAKE for the deterministic random number
+      generator (this is faster on most modern CPUs), add -DUSE_AES_DRBG.
+
+3. Run the tests, optionally specifying the number times the tests
+   need to be repeated (-r N):
+
+   ./speedtest
+
