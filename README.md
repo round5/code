@@ -102,7 +102,7 @@ The following make targets are available:
 
 The following make variables can be used to influence the build of the implementations.
 
-* `ALG_TYPE`: With this variable, the algorithm implemented by the NIST api is
+* `ALG`: With this variable, the algorithm implemented by the NIST api is
   specified. For instance, to use `R5ND_1PKE_5d` write:
   ```
   make ALG=R5ND_1PKE_5d

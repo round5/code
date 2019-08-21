@@ -8,28 +8,34 @@
 
 #if PARAMS_K !=1 && defined(CM_CACHE)
 
+#include <string.h>
+
+
+
 #include "drbg.h"
 #include "little_endian.h"
 #include "probe_cm.h"
 
-#include <string.h>
+
 
 // create a sparse ternary vector from a seed
 
 void create_secret_matrix_s_t(int16_t s_t[PARAMS_N_BAR][PARAMS_D], const uint8_t *seed) {
-    uint64_t i;
-    uint16_t h, l;
+    uint16_t i, h, l;
+    
     uint16_t x;
     uint16_t base[PARAMS_H];
     uint16_t *y = &(base[PARAMS_H]);
-    uint64_t v[2 * PROBEVEC64];
-
+    
+    uint64_t add[2 * PROBEVEC64];
+    uint64_t* sub = add + PROBEVEC64;
+    
     memset(s_t, 0, PARAMS_N_BAR * PARAMS_D * sizeof (int16_t));
-
     drbg_init(seed);
-
+    
     for (l = 0; l < PARAMS_N_BAR; l++) {
-        memset(v, 0, sizeof (v));
+        memset(add, 0, sizeof (add));
+        
         for (h = 0; h < PARAMS_H / 2; h++) {
             do {
                 do {
@@ -39,8 +45,8 @@ void create_secret_matrix_s_t(int16_t s_t[PARAMS_N_BAR][PARAMS_D], const uint8_t
                     }
                     x = *y++;
                 } while (x >= PARAMS_RS_LIM);
-                x /= PARAMS_RS_DIV;
-            } while (probe_cm_even(v, x));
+            } while (probe_cm(add, sub, x/PARAMS_RS_DIV));
+            
             do {
                 do {
                     if (y == &base[PARAMS_H]) {
@@ -49,32 +55,34 @@ void create_secret_matrix_s_t(int16_t s_t[PARAMS_N_BAR][PARAMS_D], const uint8_t
                     }
                     x = *y++;
                 } while (x >= PARAMS_RS_LIM);
-                x /= PARAMS_RS_DIV;
-            } while (probe_cm_odd(v, x));
+            } while (probe_cm(sub ,add , x/PARAMS_RS_DIV));
         }
-
+        
         for (i = 0; i < PARAMS_D; i++) {
-            s_t[l][i] = (int16_t) (((v[i >> 6] >> (i & 0x3F)) & 1) - ((v[(i >> 6) + PROBEVEC64] >> (i & 0x3F)) & 1)); // this is constant time since it goes through all values and always perform same operation.
+            s_t[l][i] = (int16_t) (((add[i >> 6] >> (i & 0x3F)) & 1)
+                                   - ((sub[i >> 6] >> (i & 0x3F)) & 1));
+            // this is constant time since it goes through all values and always perform same operation.
         }
     }
 }
 
 // create a sparse ternary vector from a seed
-
-void create_secret_matrix_r_t(int16_t r_t[PARAMS_M_BAR][PARAMS_D], const uint8_t * seed) {
-    uint64_t i;
-    uint16_t h, l;
+void create_secret_matrix_r_t(int16_t r_t[PARAMS_M_BAR][PARAMS_D], const uint8_t *seed) {
+    uint16_t i, h, l;
+    
     uint16_t x;
     uint16_t base[PARAMS_H];
     uint16_t *y = &(base[PARAMS_H]);
-    uint64_t v[2 * PROBEVEC64];
-
+    
+    uint64_t add[2 * PROBEVEC64];
+    uint64_t* sub = add + PROBEVEC64;
+    
     memset(r_t, 0, PARAMS_M_BAR * PARAMS_D * sizeof (int16_t));
-
     drbg_init(seed);
-
+    
     for (l = 0; l < PARAMS_M_BAR; l++) {
-        memset(v, 0, sizeof (v));
+        memset(add, 0, sizeof (add));
+        
         for (h = 0; h < PARAMS_H / 2; h++) {
             do {
                 do {
@@ -84,8 +92,8 @@ void create_secret_matrix_r_t(int16_t r_t[PARAMS_M_BAR][PARAMS_D], const uint8_t
                     }
                     x = *y++;
                 } while (x >= PARAMS_RS_LIM);
-                x /= PARAMS_RS_DIV;
-            } while (probe_cm_even(v, x));
+            } while (probe_cm(add, sub, x/PARAMS_RS_DIV));
+            
             do {
                 do {
                     if (y == &base[PARAMS_H]) {
@@ -94,16 +102,18 @@ void create_secret_matrix_r_t(int16_t r_t[PARAMS_M_BAR][PARAMS_D], const uint8_t
                     }
                     x = *y++;
                 } while (x >= PARAMS_RS_LIM);
-                x /= PARAMS_RS_DIV;
-            } while (probe_cm_odd(v, x));
+            } while (probe_cm(sub ,add , x/PARAMS_RS_DIV));
         }
+        
         for (i = 0; i < PARAMS_D; i++) {
-            r_t[l][i] = (int16_t) (((v[i >> 6] >> (i & 0x3F)) & 1) - ((v[PROBEVEC64 + (i >> 6)] >> (i & 0x3F)) & 1)); // this is constant time since it goes through all values and always perform same operation.
+            r_t[l][i] = (int16_t) (((add[i >> 6] >> (i & 0x3F)) & 1)
+                                   - ((sub[i >> 6] >> (i & 0x3F)) & 1));
+            // this is constant time since it goes through all values and always perform same operation.
         }
     }
 }
 
-#ifndef AVX2
+#if !defined(AVX2)
 
 // B = A * S
 

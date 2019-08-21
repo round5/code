@@ -19,8 +19,7 @@ extern "C" {
     // Return value zero (false) indicates the slot was originally empty.
 
 #if PARAMS_K != 1
-    int probe_cm_odd(uint64_t *vplus, const uint16_t x);
-    int probe_cm_even(uint64_t *vplus, const uint16_t x);
+    int probe_cm(uint64_t *add, uint64_t *sub, const uint16_t x);
 #else
     int probe_cm(uint64_t *v, const uint16_t x);
 #endif

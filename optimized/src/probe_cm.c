@@ -53,56 +53,7 @@
 
 #endif
 
-#if PARAMS_K !=1
-
-// Cache-resistant "occupancy probe". Tests and "occupies" a single slot at x.
-// Return value zero (false) indicates the slot was originally empty.
-
-int probe_cm_odd(uint64_t *vplus, const uint16_t x) {
-    int i;
-    uint64_t a, b, c, y, z;
-    uint64_t *vminus = vplus + PROBEVEC64;
-
-    // construct the selector
-    constant_time_shift_1_left64(y, x & 0x3F, 1); // low bits of index
-    constant_time_shift_1_left64(z, x >> 6, 0); // high bits of index
-
-    c = 0;
-    for (i = 0; i < PROBEVEC64; i++) { // always scan through all
-        a = vplus[i] | vminus[i];
-        b = a | (y & (-(z & 1))); // set bit if not occupied.
-        c |= a ^ b; // If change, mask. Change is in the corresponding bit to be set.
-        vminus[i] ^= a ^ b; // update value of vminus[i] by xoring with the bit to change. This should only change the bit that changes.
-        z >>= 1;
-    }
-
-    // final comparison doesn't need to be constant time
-    return c == 0; // return true if was occupied before
-}
-
-int probe_cm_even(uint64_t *vplus, const uint16_t x) {
-    int i;
-    uint64_t a, b, c, y, z;
-    uint64_t *vminus = vplus + PROBEVEC64;
-
-    // construct the selector
-    constant_time_shift_1_left64(y, x & 0x3F, 1); // low bits of index
-    constant_time_shift_1_left64(z, x >> 6, 0); // high bits of index
-
-    c = 0;
-    for (i = 0; i < PROBEVEC64; i++) { // always scan through all
-        a = vplus[i] | vminus[i];
-        b = a | (y & (-(z & 1))); // set bit if not occupied.
-        c |= a ^ b; // If change, mask. Change is in the corresponding bit to be set.
-        vplus[i] ^= a ^ b; // update value of vplus[i]
-        z >>= 1;
-    }
-
-    // final comparison doesn't need to be constant time
-    return c == 0; // return true if was occupied before
-}
-
-#else
+#if PARAMS_K==1 && !defined(AVX2)
 
 // Cache-resistant "occupancy probe". Tests and "occupies" a single slot at x.
 // Return value zero (false) indicates the slot was originally empty.
@@ -110,11 +61,10 @@ int probe_cm_even(uint64_t *vplus, const uint16_t x) {
 int probe_cm(uint64_t *v, const uint16_t x) {
     int i;
     uint64_t a, b, c, y, z;
-
     // construct the selector
     constant_time_shift_1_left64(y, x & 0x3F, 1); // low bits of index
     constant_time_shift_1_left64(z, x >> 6, 0); // high bits of index
-
+    
     c = 0;
     for (i = 0; i < PROBEVEC64; i++) { // always scan through all
         a = v[i];
@@ -123,11 +73,35 @@ int probe_cm(uint64_t *v, const uint16_t x) {
         v[i] = b; // update value of v[i]
         z >>= 1;
     }
-
     // final comparison doesn't need to be constant time
     return c == 0; // return true if was occupied before
 }
 
-#endif
+#endif // k == 1
+
+#if PARAMS_K!=1 && !defined(AVX2)
+inline int probe_cm(uint64_t * add, uint64_t *sub, const uint16_t x)  __attribute__((always_inline));
+
+int probe_cm(uint64_t *add, uint64_t *sub, const uint16_t x) {
+    int i;
+    uint64_t a, b, c, t, y, z;
+    // construct the selector
+    constant_time_shift_1_left64(y, x & 0x3F, 1); // low bits of index
+    constant_time_shift_1_left64(z, x >> 6, 0);   // high bits of index
+    c = 0;
+    for (i = 0; i < PROBEVEC64; i++) { // always scan through all
+        t = add[i];
+        a = t | sub[i];
+        b = a ^ (a | (y & (-(z & 1)))); // set bit if not occupied.
+        c |= b; // If change, mask. Change is in the corresponding bit to be set.
+        add[i] = t ^ b; // update value of add[i] by xoring with the bit to change. This should only change the bit that changes.
+        z >>= 1;
+    }
+    
+    // final comparison doesn't need to be constant time
+    return c == 0; // return true if was occupied before
+}
+
+#endif // AVX2==0
 
 #endif
