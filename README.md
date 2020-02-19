@@ -247,7 +247,7 @@ Round5 is a flexible scheme so that the user can pick up the best parameter set 
 KATs
 ----
 
-Next to the implementations, there is an additional folder called `kats`.
+Next to the implementations, there is an additional folder called `scripts_kats`.
 This folder contains scripts to generate and check kats. 
 It also contains the fingerprints of the KATs.
 
