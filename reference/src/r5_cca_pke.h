@@ -11,7 +11,7 @@
 #ifndef R5_CCA_PKE_H
 #define R5_CCA_PKE_H
 
-#include "parameters.h"
+#include "chooseparameters.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,7 +25,7 @@ extern "C" {
      * @param[in]  params the algorithm parameters to use
      * @return __0__ in case of success
      */
-    int r5_cca_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *params);
+    int r5_cca_pke_keygen(unsigned char *pk, unsigned char *sk Parameters);
 
     /**
      * Encrypts a message. Uses the parameters as specified.
@@ -38,7 +38,7 @@ extern "C" {
      * @param[in]  params the algorithm parameters to use
      * @return __0__ in case of success
      */
-    int r5_cca_pke_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned char *m, const unsigned long long m_len, const unsigned char *pk, const parameters *params);
+    int r5_cca_pke_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned char *m, const unsigned long long m_len, const unsigned char *pk Parameters);
 
     /**
      * Decrypts a message. Uses the parameters as specified.
@@ -51,7 +51,7 @@ extern "C" {
      * @param[in]  params  the algorithm parameters to use
      * @return __0__ in case of success
      */
-    int r5_cca_pke_decrypt(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, const unsigned long long ct_len, const unsigned char *sk, const parameters *params);
+    int r5_cca_pke_decrypt(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, const unsigned long long ct_len, const unsigned char *sk Parameters);
 
 #ifdef __cplusplus
 }

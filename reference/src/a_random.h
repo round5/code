@@ -10,7 +10,7 @@
 #ifndef A_RANDOM_H
 #define A_RANDOM_H
 
-#include "parameters.h"
+#include "chooseparameters.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +24,7 @@ extern "C" {
      * @param[in]  params       the algorithm parameters in use
      * @return __0__ on success
      */
-    int create_A_random(uint16_t *A_random, const unsigned char *seed, const parameters *params);
+    int create_A_random(uint16_t *A_random, const unsigned char *seed Parameters);
 
 #ifdef __cplusplus
 }

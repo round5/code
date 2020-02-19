@@ -38,38 +38,56 @@
  * @param[in]  params      the algorithm parameters
  * @return __0__ in case of success
  */
-static int create_secret_vectors_idx(uint16_t *vectors_idx, const unsigned char *seed, const unsigned nr_vectors, const parameters *params) {
-    unsigned i, j;
-    uint16_t idx;
-    unsigned char *occupied = checked_malloc(params->d);
 
-    /* Initialize drbg */
-    drbg_init(seed, params->kappa_bytes);
-    DRBG_SAMPLER16_INIT(params->d);
+static int create_secret_vectors_idx(uint16_t *vectors_idx, const unsigned char *seed, const unsigned nr_vectors Parameters) {
+	unsigned i, j;
+	uint16_t idx;
+	unsigned char *occupied = checked_malloc(PARAMS_D);
 
-    size_t pos_idx = 0;
-    size_t neg_idx = params->h / 2;
-    for (j = 0; j < nr_vectors; ++j) {
-        memset(occupied, 0, params->d);
-        for (i = 0; i < params->h; ++i) {
-            do {
-                DRBG_SAMPLER16(idx, params->d);
-            } while (occupied[idx] != 0);
-            occupied[idx] = 1;
-            if (i & 1) {
-                vectors_idx[neg_idx++] = idx;
-            } else {
-                vectors_idx[pos_idx++] = idx;
-            }
-        }
-        pos_idx += params->h / 2;
-        neg_idx += params->h / 2;
-    }
+	size_t l;
 
-    free(occupied);
+	unsigned char *jArray = checked_malloc( sizeof(size_t) );
+	memset(jArray, 0, sizeof(size_t));
 
-    return 0;
+	// custom_len = ceil((PARAMS_N_BAR - 1)/256)
+	size_t custom_len = 0;
+	if (nr_vectors > 1){custom_len = sizeof(size_t);}
+
+	size_t pos_idx = 0;
+	size_t neg_idx = PARAMS_H / 2;
+
+	DRBG_SAMPLER16_INIT(PARAMS_D);
+
+	for (j = 0; j < nr_vectors; ++j) {
+		memset(jArray, 0, sizeof(size_t));
+		for (l = 0; l < sizeof(size_t); l++) { 
+			jArray[l] = (j >> (8*l)) & (0xFF);
+		}
+
+		drbg_init_customization(seed, jArray, custom_len);
+		memset(occupied, 0, PARAMS_D);
+
+		for (i = 0; i < PARAMS_H; ++i) {
+			do {
+				DRBG_SAMPLER16(idx);
+			} while (occupied[idx] != 0);
+			occupied[idx] = 1;
+			if (i & 1) {
+				vectors_idx[neg_idx++] = idx;
+			} else {
+				vectors_idx[pos_idx++] = idx;
+			}
+		}
+		pos_idx += PARAMS_H / 2;
+		neg_idx += PARAMS_H / 2;
+	}
+
+	free(occupied);
+	free(jArray);
+	return 0;
 }
+ 
+
 
 /**
  * Multiplies a polynomial in the cyclotomic ring times (X - 1), the result can
@@ -114,18 +132,18 @@ int unlift_poly(uint16_t *cyc_pol, const uint16_t *ntru_pol, size_t len) {
  * @param[in] params the algorithm parameters in use
  * @return __X[l]__
  */
-static inline uint16_t compute_BTR_coefficient_ring(const uint16_t *B, const uint16_t *R_idx, const uint32_t l, const parameters *params) {
+static inline uint16_t compute_BTR_coefficient_ring(const uint16_t *B, const uint16_t *R_idx, const uint32_t l Parameters) {
     uint32_t k;
 
     uint16_t B_val;
     uint16_t X_val = 0;
 
-    for (k = 0; k < params->h / 2; ++k) {
+    for (k = 0; k < PARAMS_H / 2; ++k) {
         B_val = B[R_idx[k] + l];
         X_val = (uint16_t) (X_val + B_val);
     }
 
-    for (k = params->h / 2; k < params->h; ++k) {
+    for (k = PARAMS_H / 2; k < PARAMS_H; ++k) {
         B_val = B[R_idx[k] + l];
         X_val = (uint16_t) (X_val - B_val);
     }
@@ -142,7 +160,7 @@ static inline uint16_t compute_BTR_coefficient_ring(const uint16_t *B, const uin
  * @param[in] params the algorithm parameters in use
  * @return
  */
-static int compute_BTR_non_ring(uint16_t *X, uint16_t *B, const uint16_t *R_idx, const parameters *params) {
+static int compute_BTR_non_ring(uint16_t *X, uint16_t *B, const uint16_t *R_idx Parameters) {
     size_t idx;
     uint32_t i = 0;
     uint32_t j = 0;
@@ -150,20 +168,20 @@ static int compute_BTR_non_ring(uint16_t *X, uint16_t *B, const uint16_t *R_idx,
     size_t index;
     uint16_t B_val;
     uint16_t X_val;
-    for (idx = 0; idx < params->mu; ++idx) {
-        if (j == params->m_bar) {
+    for (idx = 0; idx < PARAMS_MU; ++idx) {
+        if (j == PARAMS_M_BAR) {
             j = 0;
             ++i;
         }
         X_val = 0;
-        for (k = 0; k < params->h / 2; ++k) {
-            index = (size_t) ((R_idx[j * params->h + k]));
-            B_val = B[index * params->n_bar + i];
+        for (k = 0; k < PARAMS_H / 2; ++k) {
+            index = (size_t) ((R_idx[j * PARAMS_H + k]));
+            B_val = B[index * PARAMS_N_BAR + i];
             X_val = (uint16_t) (X_val + B_val);
         }
-        for (k = params->h / 2; k < params->h; ++k) {
-            index = (size_t) ((R_idx[j * params->h + k]));
-            B_val = B[index * params->n_bar + i];
+        for (k = PARAMS_H / 2; k < PARAMS_H; ++k) {
+            index = (size_t) ((R_idx[j * PARAMS_H + k]));
+            B_val = B[index * PARAMS_N_BAR + i];
             X_val = (uint16_t) (X_val - B_val);
         }
         X[idx] = X_val;
@@ -181,7 +199,7 @@ static int compute_BTR_non_ring(uint16_t *X, uint16_t *B, const uint16_t *R_idx,
  * @param[in] params the algorithm parameters in use
  * @return
  */
-static int compute_US_non_ring(uint16_t *X_prime, uint16_t *U_T, const uint16_t *S_idx, const parameters *params) {
+static int compute_US_non_ring(uint16_t *X_prime, uint16_t *U_T, const uint16_t *S_idx Parameters) {
     size_t idx;
     uint32_t i = 0;
     uint32_t j = 0;
@@ -189,20 +207,20 @@ static int compute_US_non_ring(uint16_t *X_prime, uint16_t *U_T, const uint16_t 
     size_t index;
     uint16_t U_T_val;
     uint16_t X_prime_val;
-    for (idx = 0; idx < params->mu; ++idx) {
-        if (i == params->m_bar) {
+    for (idx = 0; idx < PARAMS_MU; ++idx) {
+        if (i == PARAMS_M_BAR) {
             i = 0;
             ++j;
         }
         X_prime_val = 0;
-        for (k = 0; k < params->h / 2; ++k) {
-            index = (size_t) ((S_idx[j * params->h + k]));
-            U_T_val = U_T[index + i * params->d];
+        for (k = 0; k < PARAMS_H / 2; ++k) {
+            index = (size_t) ((S_idx[j * PARAMS_H + k]));
+            U_T_val = U_T[index + i * PARAMS_D];
             X_prime_val = (uint16_t) (X_prime_val + U_T_val);
         }
-        for (k = params->h / 2; k < params->h; ++k) {
-            index = (size_t) ((S_idx[j * params->h + k]));
-            U_T_val = U_T[index + i * params->d];
+        for (k = PARAMS_H / 2; k < PARAMS_H; ++k) {
+            index = (size_t) ((S_idx[j * PARAMS_H + k]));
+            U_T_val = U_T[index + i * PARAMS_D];
             X_prime_val = (uint16_t) (X_prime_val - U_T_val);
         }
         X_prime[idx] = X_prime_val;
@@ -220,21 +238,21 @@ static int compute_US_non_ring(uint16_t *X_prime, uint16_t *U_T, const uint16_t 
  * @param[in] params the algorithm parameters in use
  * @return
  */
-static int compute_BTR_ring(uint16_t *X, uint16_t *B, const uint16_t *R_idx, const parameters *params) {
+static int compute_BTR_ring(uint16_t *X, uint16_t *B, const uint16_t *R_idx Parameters) {
     uint32_t i = 0;
     uint16_t *B_aux;
     uint16_t *X_aux;
-    const uint32_t size_B_aux = (uint32_t) (params->d + 1);
+    const uint32_t size_B_aux = (uint32_t) (PARAMS_D + 1);
 
     /* First we extend (and lift) B */
     B_aux = checked_malloc((size_t) (2 * size_B_aux) * sizeof (*B_aux));
 
-    if (params->xe == 0 && params->f == 0) {
+    if (PARAMS_XE == 0 && PARAMS_F == 0) {
         /* Move to NTRU ring */
-        lift_poly(B_aux, (int16_t*) B, params->d);
+        lift_poly(B_aux, (int16_t*) B, PARAMS_D);
     } else {
-        memcpy(B_aux, B, params->d * sizeof (*B));
-        B_aux[params->d] = 0;
+        memcpy(B_aux, B, PARAMS_D * sizeof (*B));
+        B_aux[PARAMS_D] = 0;
     }
 
     /* Rearrange elements */
@@ -249,20 +267,20 @@ static int compute_BTR_ring(uint16_t *X, uint16_t *B, const uint16_t *R_idx, con
     memcpy(B_aux + size_B_aux, B_aux, size_B_aux * sizeof (*B_aux));
 
     /* Temp variable to store the results */
-    X_aux = checked_calloc((size_t) (params->mu + 1), sizeof (*X_aux));
+    X_aux = checked_calloc((size_t) (PARAMS_MU + 1), sizeof (*X_aux));
 
     /* Compute X */
     uint32_t idx;
-    X_aux[0] = compute_BTR_coefficient_ring(B_aux, R_idx, 0, params);
-    for (idx = 1; idx < params->mu + 1U; ++idx) {
-        X_aux[idx] = compute_BTR_coefficient_ring(B_aux, R_idx, params->d + 1U - idx, params);
+    X_aux[0] = compute_BTR_coefficient_ring(B_aux, R_idx, 0 Params);
+    for (idx = 1; idx < PARAMS_MU + 1U; ++idx) {
+        X_aux[idx] = compute_BTR_coefficient_ring(B_aux, R_idx, PARAMS_D + 1U - idx Params);
     }
 
-    if (params->xe == 0 && params->f == 0) {
+    if (PARAMS_XE == 0 && PARAMS_F == 0) {
         /* In case of the ring, convert back to cyclotomic polynomial*/
-        unlift_poly(X, X_aux, params->mu);
+        unlift_poly(X, X_aux, PARAMS_MU);
     } else {
-        memcpy(X, X_aux + 1, params->mu * sizeof (*X));
+        memcpy(X, X_aux + 1, PARAMS_MU * sizeof (*X));
     }
 
     free(B_aux);
@@ -280,12 +298,12 @@ static int compute_BTR_ring(uint16_t *X, uint16_t *B, const uint16_t *R_idx, con
  * @param[in]  params   the algorithm parameters in use
  * @return __0__ on success
  */
-static int permutation_tau_0_ring(uint32_t *row_disp, const parameters *params) {
+static int permutation_tau_0_ring(uint32_t *row_disp Parameters) {
     uint32_t i;
-    uint32_t n_rows = (uint32_t) (params->d + 1);
+    uint32_t n_rows = (uint32_t) (PARAMS_D + 1);
 
     for (i = 0; i < n_rows; ++i) {
-        row_disp[i] = (uint32_t) (params->d + 1) - i;
+        row_disp[i] = (uint32_t) (PARAMS_D + 1) - i;
     }
 
     return 0;
@@ -299,11 +317,11 @@ static int permutation_tau_0_ring(uint32_t *row_disp, const parameters *params) 
  * @param[in]  params   the algorithm parameters in use
  * @return __0__ on success
  */
-static int permutation_tau_0_non_ring(uint32_t *row_disp, const parameters *params) {
+static int permutation_tau_0_non_ring(uint32_t *row_disp Parameters) {
     uint32_t i;
 
-    for (i = 0; i < params->d; ++i) {
-        row_disp[i] = i * params->d;
+    for (i = 0; i < PARAMS_D; ++i) {
+        row_disp[i] = i * PARAMS_D;
     }
 
     return 0;
@@ -322,16 +340,16 @@ static const uint8_t permutation_customization[2] = {0, 1};
  * @param[in]  params    the algorithm parameters in use
  * @return __0__ on success
  */
-static int permutation_tau_1(uint32_t *row_disp, const unsigned char *seed, const parameters *params) {
+static int permutation_tau_1(uint32_t *row_disp, const unsigned char *seed Parameters) {
     uint32_t i;
     uint16_t rnd;
-    DRBG_SAMPLER16_INIT(params->d);
+    DRBG_SAMPLER16_INIT(PARAMS_D);
 
-    drbg_init_customization(seed, params->kappa_bytes, permutation_customization, sizeof (permutation_customization));
+    drbg_init_customization(seed, permutation_customization, sizeof (permutation_customization));
 
-    for (i = 0; i < params->d; ++i) {
-        DRBG_SAMPLER16(rnd, params->d);
-        row_disp[i] = 2 * i * params->d + rnd;
+    for (i = 0; i < PARAMS_D; ++i) {
+        DRBG_SAMPLER16(rnd);
+        row_disp[i] = 2 * i * PARAMS_D + rnd;
     }
 
     return 0;
@@ -345,16 +363,19 @@ static int permutation_tau_1(uint32_t *row_disp, const unsigned char *seed, cons
  * @param[in]  params    the algorithm parameters in use
  * @return __0__ on success
  */
-static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed, const parameters *params) {
+static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed Parameters) {
     uint32_t i;
     uint16_t rnd;
-    uint8_t *v = checked_calloc(params->tau2_len, 1);
+    uint8_t *v = checked_calloc(PARAMS_TAU2_LEN, 1);
 
-    drbg_init_customization(seed, params->kappa_bytes, permutation_customization, sizeof (permutation_customization));
+    drbg_init_customization(seed, permutation_customization, sizeof (permutation_customization));
 
-    for (i = 0; i < params->k; ++i) {
+    for (i = 0; i < PARAMS_K; ++i) {
         do {
-            rnd = (uint16_t) (drbg_sampler16_2(params->tau2_len) & (params->tau2_len - 1));
+//            rnd = (uint16_t) (drbg_sampler16_2(PARAMS_TAU2_LEN) & (PARAMS_TAU2_LEN - 1));
+//            niet gelijk aan:
+             drbg_sampler16_2(rnd);
+             rnd = (uint16_t) (rnd & (PARAMS_TAU2_LEN - 1 ));
         } while (v[rnd]);
         v[rnd] = 1;
         row_disp[i] = rnd;
@@ -373,35 +394,35 @@ static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed, cons
  * @param[in]   params    the algorithm parameters in use
  * @return __0__ on success
  */
-static int create_A_master(uint16_t **A_master, const unsigned char *sigma, const parameters *params) {
+static int create_A_master(uint16_t **A_master, const unsigned char *sigma Parameters) {
     size_t i;
 
-    switch (params->tau) {
+    switch (PARAMS_TAU) {
         case 0:
-            if (params->k == 1) {
-                *A_master = checked_malloc((2 * (size_t) (params->d + 1) * sizeof (**A_master)));
-                create_A_random(*A_master, sigma, params);
-                uint16_t *aux = checked_malloc((size_t) (params->d + 1) * sizeof (*aux));
-                lift_poly(aux, (int16_t *) * A_master, params->d);
+            if (PARAMS_K == 1) {
+                *A_master = checked_malloc((2 * (size_t) (PARAMS_D + 1) * sizeof (**A_master)));
+                create_A_random(*A_master, sigma Params);
+                uint16_t *aux = checked_malloc((size_t) (PARAMS_D + 1) * sizeof (*aux));
+                lift_poly(aux, (int16_t *) * A_master, PARAMS_D);
                 (*A_master)[0] = aux[0];
-                for (i = 1; i < (size_t) (params->d + 1); ++i) {
-                    (*A_master)[i] = aux[(size_t) (params->d + 1) - i];
+                for (i = 1; i < (size_t) (PARAMS_D + 1); ++i) {
+                    (*A_master)[i] = aux[(size_t) (PARAMS_D + 1) - i];
                 }
-                memcpy((*A_master) + (params->d + 1), *A_master, (size_t) (params->d + 1) * sizeof (**A_master));
+                memcpy((*A_master) + (PARAMS_D + 1), *A_master, (size_t) (PARAMS_D + 1) * sizeof (**A_master));
                 free(aux);
             } else {
-                *A_master = checked_malloc((size_t) (params->k * params->d) * sizeof (**A_master));
-                create_A_random(*A_master, sigma, params);
+                *A_master = checked_malloc((size_t) (PARAMS_K * PARAMS_D) * sizeof (**A_master));
+                create_A_random(*A_master, sigma Params);
             }
             break;
         case 1:
-            assert(A_fixed != NULL && A_fixed_len == (size_t) (2 * params->d * params->k));
+            assert(A_fixed != NULL && A_fixed_len == (size_t) (2 * PARAMS_D * PARAMS_K));
             *A_master = A_fixed;
             break;
         case 2:
-            *A_master = checked_malloc((size_t) (params->tau2_len + params->d) * sizeof (**A_master));
-            create_A_random(*A_master, sigma, params);
-            memcpy((*A_master) + params->tau2_len, *A_master, params->d * sizeof (**A_master));
+            *A_master = checked_malloc((size_t) (PARAMS_TAU2_LEN + PARAMS_D) * sizeof (**A_master));
+            create_A_random(*A_master, sigma Params);
+            memcpy((*A_master) + PARAMS_TAU2_LEN, *A_master, PARAMS_D * sizeof (**A_master));
 
             break;
     }
@@ -413,40 +434,40 @@ static int create_A_master(uint16_t **A_master, const unsigned char *sigma, cons
  * Public functions
  ******************************************************************************/
 
-int create_A(uint16_t **A_master, uint32_t *A_permutation, const unsigned char *sigma, const parameters *params) {
+int create_A(uint16_t **A_master, uint32_t *A_permutation, const unsigned char *sigma Parameters) {
     /* Create A_master */
-    create_A_master(A_master, sigma, params);
+    create_A_master(A_master, sigma Params);
 
     /* Compute the permutation */
-    assert(params->tau <= 2);
-    switch (params->tau) {
+    assert(PARAMS_TAU <= 2);
+    switch (PARAMS_TAU) {
         case 0:
-            if (params->k == 1) {
-                permutation_tau_0_ring(A_permutation, params);
+            if (PARAMS_K == 1) {
+                permutation_tau_0_ring(A_permutation Params);
             } else {
-                permutation_tau_0_non_ring(A_permutation, params);
+                permutation_tau_0_non_ring(A_permutation Params);
             }
             break;
         case 1:
-            permutation_tau_1(A_permutation, sigma, params);
+            permutation_tau_1(A_permutation, sigma Params);
             break;
         case 2:
-            permutation_tau_2(A_permutation, sigma, params);
+            permutation_tau_2(A_permutation, sigma Params);
             break;
     }
 
     return 0;
 }
 
-int create_S(uint16_t *S_idx, const unsigned char *sk, const parameters *params) {
-    return create_secret_vectors_idx(S_idx, sk, params->n_bar, params);
+int create_S(uint16_t *S_idx, const unsigned char *sk Parameters) {
+    return create_secret_vectors_idx(S_idx, sk, PARAMS_N_BAR Params);
 }
 
-int create_R(uint16_t *R_idx, const unsigned char *rho, const parameters *params) {
-    return create_secret_vectors_idx(R_idx, rho, params->m_bar, params);
+int create_R(uint16_t *R_idx, const unsigned char *rho Parameters) {
+    return create_secret_vectors_idx(R_idx, rho, PARAMS_M_BAR Params);
 }
 
-int compute_AS(uint16_t *B, const uint16_t *A_master, const uint32_t *A_permutation, const uint16_t *S_idx, const parameters *params) {
+int compute_AS(uint16_t *B, const uint16_t *A_master, const uint32_t *A_permutation, const uint16_t *S_idx Parameters) {
     uint32_t i, j, k;
     uint32_t size_i, size_j;
     size_t idx = 0;
@@ -454,31 +475,31 @@ int compute_AS(uint16_t *B, const uint16_t *A_master, const uint32_t *A_permutat
     uint32_t A_idx;
     uint16_t *B_aux;
 
-    if (params->k == 1) {
+    if (PARAMS_K == 1) {
         /* Ring */
-        assert(params->n_bar == 1 && params->m_bar == 1);
-        size_i = params->n + 1;
+        assert(PARAMS_N_BAR == 1 && PARAMS_M_BAR == 1);
+        size_i = ((uint32_t)PARAMS_N) + 1;
         size_j = 1;
         B_aux = checked_malloc(size_i * sizeof (*B_aux));
     } else {
         /* Non-ring */
-        size_i = params->d;
-        size_j = params->n_bar;
+        size_i = PARAMS_D;
+        size_j = PARAMS_N_BAR;
         B_aux = B;
     }
 
     for (i = 0; i < size_i; ++i) {
         for (j = 0; j < size_j; ++j) {
             B_val = 0;
-            for (k = 0; k < params->h / 2; ++k) {
+            for (k = 0; k < PARAMS_H / 2; ++k) {
                 /* Positions where S = 1 */
-                A_idx = (uint32_t) (S_idx[j * params->h + k] + A_permutation[i]);
+                A_idx = (uint32_t) (S_idx[j * PARAMS_H + k] + A_permutation[i]);
                 A_val = A_master[A_idx];
                 B_val = (uint16_t) (B_val + A_val);
             }
-            for (k = params->h / 2; k < params->h; ++k) {
+            for (k = PARAMS_H / 2; k < PARAMS_H; ++k) {
                 /* Positions where S = -1 */
-                A_idx = (uint32_t) (S_idx[j * params->h + k] + A_permutation[i]);
+                A_idx = (uint32_t) (S_idx[j * PARAMS_H + k] + A_permutation[i]);
                 A_val = A_master[A_idx];
                 B_val = (uint16_t) (B_val - A_val);
             }
@@ -487,41 +508,41 @@ int compute_AS(uint16_t *B, const uint16_t *A_master, const uint32_t *A_permutat
         }
     }
 
-    if (params->k == 1) {
+    if (PARAMS_K == 1) {
         /* Unlift */
-        unlift_poly(B, B_aux, params->n);
+        unlift_poly(B, B_aux, PARAMS_N);
         free(B_aux);
     }
 
     return 0;
 }
 
-int compute_RTA(uint16_t *U_T, const uint16_t *A_master, const uint32_t *A_permutation, const uint16_t *R_idx, const parameters *params) {
-    if (params->k != 1) {
+int compute_RTA(uint16_t *U_T, const uint16_t *A_master, const uint32_t *A_permutation, const uint16_t *R_idx Parameters) {
+    if (PARAMS_K != 1) {
         /* Non-ring */
         uint32_t i, j, k;
-        const size_t len_u = (size_t) (params->d * params->m_bar);
+        const size_t len_u = (size_t) (PARAMS_D * PARAMS_M_BAR);
 
         uint16_t A_val;
         size_t A_row, A_row_idx;
 
         memset(U_T, 0, len_u * sizeof (*U_T));
 
-        for (j = 0; j < params->m_bar; ++j) {
-            for (k = 0; k < params->h / 2; ++k) {
-                A_row = (size_t) ((R_idx[j * params->h + k]));
+        for (j = 0; j < PARAMS_M_BAR; ++j) {
+            for (k = 0; k < PARAMS_H / 2; ++k) {
+                A_row = (size_t) ((R_idx[j * PARAMS_H + k]));
                 A_row_idx = A_permutation[A_row];
-                for (i = 0; i < params->d; ++i) {
+                for (i = 0; i < PARAMS_D; ++i) {
                     A_val = A_master[i + A_row_idx];
-                    U_T[j * params->d + i] = (uint16_t) (U_T[j * params->d + i] + A_val);
+                    U_T[j * PARAMS_D + i] = (uint16_t) (U_T[j * PARAMS_D + i] + A_val);
                 }
             }
-            for (k = params->h / 2; k < params->h; ++k) {
-                A_row = (size_t) ((R_idx[j * params->h + k]));
+            for (k = PARAMS_H / 2; k < PARAMS_H; ++k) {
+                A_row = (size_t) ((R_idx[j * PARAMS_H + k]));
                 A_row_idx = A_permutation[A_row];
-                for (i = 0; i < params->d; ++i) {
+                for (i = 0; i < PARAMS_D; ++i) {
                     A_val = A_master[i + A_row_idx];
-                    U_T[j * params->d + i] = (uint16_t) (U_T[j * params->d + i] - A_val);
+                    U_T[j * PARAMS_D + i] = (uint16_t) (U_T[j * PARAMS_D + i] - A_val);
                 }
             }
         }
@@ -529,35 +550,35 @@ int compute_RTA(uint16_t *U_T, const uint16_t *A_master, const uint32_t *A_permu
         return 0;
     } else {
         /* Ring */
-        assert(params->n_bar == 1 && params->m_bar == 1);
+        assert(PARAMS_N_BAR == 1 && PARAMS_M_BAR == 1);
         /* With ring, A^T == A and U^T == U so (A^T*R)^T = A*R and since S and R in this case are
          * the same dimensions we can use the same function as when computing B */
-        return compute_AS(U_T, A_master, A_permutation, R_idx, params);
+        return compute_AS(U_T, A_master, A_permutation, R_idx Params);
     }
 }
 
-int compute_BTR(uint16_t *X, uint16_t *B, const uint16_t *R_idx, const parameters *params) {
-    if (params->k != 1) {
+int compute_BTR(uint16_t *X, uint16_t *B, const uint16_t *R_idx Parameters) {
+    if (PARAMS_K != 1) {
         /* Non-ring */
-        return compute_BTR_non_ring(X, B, R_idx, params);
+        return compute_BTR_non_ring(X, B, R_idx Params);
     } else {
         /* Ring */
-        assert(params->n_bar == 1 && params->m_bar == 1);
-        return compute_BTR_ring(X, B, R_idx, params);
+        assert(PARAMS_N_BAR == 1 && PARAMS_M_BAR == 1);
+        return compute_BTR_ring(X, B, R_idx Params);
     }
 }
 
-int compute_STU(uint16_t *X_prime, uint16_t *U_T, const uint16_t *S_idx, const parameters *params) {
-    if (params->k != 1) {
+int compute_STU(uint16_t *X_prime, uint16_t *U_T, const uint16_t *S_idx Parameters) {
+    if (PARAMS_K != 1) {
         /* Non-ring */
-        return compute_US_non_ring(X_prime, U_T, S_idx, params);
+        return compute_US_non_ring(X_prime, U_T, S_idx Params);
     } else {
         /* Ring */
-        assert(params->n_bar == 1 && params->m_bar == 1);
+        assert(PARAMS_N_BAR == 1 && PARAMS_M_BAR == 1);
         /* With ring, X' == X'^T and U^T == U so X'^T = (S^T*U)^T = U^T*S = U*S
          * and since U and B and S and R in this case are the same dimensions we
          * can use the same function as when computing X = B^T*R */
-        return compute_BTR_ring(X_prime, U_T, S_idx, params);
+        return compute_BTR_ring(X_prime, U_T, S_idx Params);
     }
 }
 

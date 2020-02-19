@@ -16,20 +16,20 @@
 size_t A_fixed_len = 0;
 uint16_t *A_fixed = NULL;
 
-int create_A_fixed(const unsigned char *seed, const parameters *params) {
-    A_fixed_len = (size_t) (params->d * params->k);
+int create_A_fixed(const unsigned char *seed Parameters) {
+    A_fixed_len = (size_t) (PARAMS_D * PARAMS_K);
 
     /* (Re)allocate space for A_fixed */
     A_fixed = checked_realloc(A_fixed, A_fixed_len * sizeof (*A_fixed));
 
     /* Create A_fixed randomly */
-    if (create_A_random(A_fixed, seed, params)) {
+    if (create_A_random(A_fixed, seed Params)) {
         return 1;
     }
 
     /* Make all elements mod q */
     for (size_t i = 0; i < A_fixed_len; ++i) {
-        A_fixed[i] = (uint16_t) (A_fixed[i] & (params->q - 1));
+        A_fixed[i] = (uint16_t) (A_fixed[i] & (PARAMS_Q - 1));
     }
 
     return 0;

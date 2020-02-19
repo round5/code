@@ -10,7 +10,7 @@
 #ifndef A_FIXED_H
 #define A_FIXED_H
 
-#include "parameters.h"
+#include "chooseparameters.h"
 #include <stddef.h>
 
 /**
@@ -35,7 +35,7 @@ extern "C" {
      * @param[in] params the algorithm parameters for which the fixed A matrix should be generated
      * @return __0__ in case of success
      */
-    int create_A_fixed(const unsigned char *seed, const parameters *params);
+    int create_A_fixed(const unsigned char *seed Parameters);
 
 #ifdef __cplusplus
 }

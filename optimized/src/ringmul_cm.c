@@ -11,47 +11,26 @@
 
 #include "drbg.h"
 #include "little_endian.h"
-#include "probe_cm.h"
 
 #include <string.h>
 
-// create a sparse ternary vector from a seed
-
-void create_secret_vector(uint16_t idx[PARAMS_H / 2][2], const uint8_t *seed) {
-    size_t i;
-    uint16_t x;
-    uint64_t v[PROBEVEC64];
-
-    memset(v, 0, sizeof (v));
-    drbg_init(seed);
-
-    for (i = 0; i < PARAMS_H; i++) {
-        do {
-            do {
-                drbg16(x);
-            } while (x >= PARAMS_RS_LIM);
-            x /= PARAMS_RS_DIV;
-        } while (probe_cm(v, x));
-        idx[i >> 1][i & 1] = x; // addition / subtract index
-    }
-}
 
 // multiplication mod q, result length n
 
-void ringmul_q(modq_t d[PARAMS_ND], modq_t a[PARAMS_ND], uint16_t idx[PARAMS_H / 2][2]) {
+void ringmul_q(modq_t d[PARAMS_N], modq_t a[PARAMS_N], tern_secret idx) {
     size_t i, j, k;
-    modq_t p[PARAMS_ND + 1];
+    modq_t p[PARAMS_N + 1];
 
     // Note: order of coefficients a[1..n] is reversed!
     // "lift" -- multiply by (x - 1)
     p[0] = (modq_t) (-a[0]);
-    for (i = 1; i < PARAMS_ND; i++) {
-        p[PARAMS_ND + 1 - i] = (modq_t) (a[i - 1] - a[i]);
+    for (i = 1; i < PARAMS_N; i++) {
+        p[PARAMS_N + 1 - i] = (modq_t) (a[i - 1] - a[i]);
     }
-    p[1] = a[PARAMS_ND - 1];
+    p[1] = a[PARAMS_N - 1];
 
     // Initialize result
-    memset(d, 0, PARAMS_ND * sizeof (modq_t));
+    memset(d, 0, PARAMS_N * sizeof (modq_t));
 
     for (i = 0; i < PARAMS_H / 2; i++) {
         // Modified to always scan the same ranges
@@ -62,7 +41,7 @@ void ringmul_q(modq_t d[PARAMS_ND], modq_t a[PARAMS_ND], uint16_t idx[PARAMS_H /
             d[j] = (modq_t) (d[j] + p[--k]);
             j++;
         }
-        for (k = PARAMS_ND + 1; j < PARAMS_ND;) {
+        for (k = PARAMS_N + 1; j < PARAMS_N;) {
             d[j] = (modq_t) (d[j] + p[--k]);
             j++;
         }
@@ -73,7 +52,7 @@ void ringmul_q(modq_t d[PARAMS_ND], modq_t a[PARAMS_ND], uint16_t idx[PARAMS_H /
             d[j] = (modq_t) (d[j] - p[--k]);
             j++;
         }
-        for (k = PARAMS_ND + 1; j < PARAMS_ND;) {
+        for (k = PARAMS_N + 1; j < PARAMS_N;) {
             d[j] = (modq_t) (d[j] - p[--k]);
             j++;
         }
@@ -81,35 +60,35 @@ void ringmul_q(modq_t d[PARAMS_ND], modq_t a[PARAMS_ND], uint16_t idx[PARAMS_H /
 
     // "unlift"
     d[0] = (uint16_t) (-d[0]);
-    for (i = 1; i < PARAMS_ND; ++i) {
+    for (i = 1; i < PARAMS_N; ++i) {
         d[i] = (uint16_t) (d[i - 1] - d[i]);
     }
 }
 
 // multiplication mod p, result length mu
 
-void ringmul_p(modp_t d[PARAMS_MU], modp_t a[PARAMS_ND], uint16_t idx[PARAMS_H / 2][2]) {
+void ringmul_p(modp_t d[PARAMS_MU], modp_t a[PARAMS_N], tern_secret idx) {
     size_t i, j, k;
-    modp_t p[PARAMS_ND + 1];
+    modp_t p[PARAMS_N + 1];
 
     // Note: order of coefficients a[1..n] is reversed!
 #if (PARAMS_XE == 0) && (PARAMS_F == 0)
     // Without error correction we "lift" -- i.e. multiply by (x - 1)
     p[0] = (modp_t) (-a[0]);
-    for (i = 1; i < PARAMS_ND; i++) {
-        p[PARAMS_ND + 1 - i] = (modp_t) (a[i - 1] - a[i]);
+    for (i = 1; i < PARAMS_N; i++) {
+        p[PARAMS_N + 1 - i] = (modp_t) (a[i - 1] - a[i]);
     }
-    p[1] = a[PARAMS_ND - 1];
-#define SIZE_TMP_D PARAMS_ND
+    p[1] = a[PARAMS_N - 1];
+#define SIZE_TMP_D PARAMS_N
 #else
     // With error correction we do not "lift"
     p[0] = a[0];
-    for (i = 2; i < PARAMS_ND + 1; i++) {
-        p[i] = a[PARAMS_ND + 1 - i];
+    for (i = 2; i < PARAMS_N + 1; i++) {
+        p[i] = a[PARAMS_N + 1 - i];
     }
     p[1] = 0;
     // Since we do not unlift at the end, we actually need to compute one element more.
-#define SIZE_TMP_D (PARAMS_ND+1)
+#define SIZE_TMP_D (PARAMS_N+1)
 #endif
 
     modp_t tmp_d[SIZE_TMP_D];
@@ -126,7 +105,7 @@ void ringmul_p(modp_t d[PARAMS_MU], modp_t a[PARAMS_ND], uint16_t idx[PARAMS_H /
             tmp_d[j] = (modp_t) (tmp_d[j] + p[--k]);
             j++;
         }
-        for (k = PARAMS_ND + 1; j < SIZE_TMP_D;) {
+        for (k = PARAMS_N + 1; j < SIZE_TMP_D;) {
             tmp_d[j] = (modp_t) (tmp_d[j] + p[--k]);
             j++;
         }
@@ -137,7 +116,7 @@ void ringmul_p(modp_t d[PARAMS_MU], modp_t a[PARAMS_ND], uint16_t idx[PARAMS_H /
             tmp_d[j] = (modp_t) (tmp_d[j] - p[--k]);
             j++;
         }
-        for (k = PARAMS_ND + 1; j < SIZE_TMP_D;) {
+        for (k = PARAMS_N + 1; j < SIZE_TMP_D;) {
             tmp_d[j] = (modp_t) (tmp_d[j] - p[--k]);
             j++;
         }

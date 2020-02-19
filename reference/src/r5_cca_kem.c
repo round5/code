@@ -42,58 +42,58 @@ static int verify(const void *s1, const void *s2, size_t n) {
  * Public functions
  ******************************************************************************/
 
-int r5_cca_kem_keygen(unsigned char *pk, unsigned char *sk, const parameters *params) {
-    unsigned char *y = checked_malloc(params->kappa_bytes);
+int r5_cca_kem_keygen(unsigned char *pk, unsigned char *sk Parameters) {
+    unsigned char *y = checked_malloc(PARAMS_KAPPA_BYTES);
 
     /* Generate the base key pair */
-    r5_cpa_pke_keygen(pk, sk, params);
+    r5_cpa_pke_keygen(pk, sk Params);
 
     /* Append y and pk to sk */
-    randombytes(y, params->kappa_bytes);
-    memcpy(sk + params->kappa_bytes, y, params->kappa_bytes);
-    memcpy(sk + params->kappa_bytes + params->kappa_bytes, pk, params->pk_size);
+    randombytes(y, PARAMS_KAPPA_BYTES);
+    memcpy(sk + PARAMS_KAPPA_BYTES, y, PARAMS_KAPPA_BYTES);
+    memcpy(sk + PARAMS_KAPPA_BYTES + PARAMS_KAPPA_BYTES, pk, PARAMS_PK_SIZE);
 
     free(y);
 
     return 0;
 }
 
-int r5_cca_kem_encapsulate(unsigned char *ct, unsigned char *k, const unsigned char *pk, const parameters *params) {
+int r5_cca_kem_encapsulate(unsigned char *ct, unsigned char *k, const unsigned char *pk Parameters) {
     unsigned char *hash_input;
     unsigned char *m;
     unsigned char *L_g_rho;
 
     /* Allocate space */
-    hash_input = checked_malloc((size_t) (params->kappa_bytes + params->pk_size));
-    m = checked_malloc(params->kappa_bytes);
-    L_g_rho = checked_malloc(3U * params->kappa_bytes);
+    hash_input = checked_malloc((size_t) (PARAMS_KAPPA_BYTES + PARAMS_PK_SIZE));
+    m = checked_malloc(PARAMS_KAPPA_BYTES);
+    L_g_rho = checked_malloc(3U * PARAMS_KAPPA_BYTES);
 
     /* Generate random m */
-    randombytes(m, params->kappa_bytes);
+    randombytes(m, PARAMS_KAPPA_BYTES);
 
     /* Determine l, g, and rho */
-    memcpy(hash_input, m, params->kappa_bytes);
-    memcpy(hash_input + params->kappa_bytes, pk, params->pk_size);
-    hash(L_g_rho, 3U * params->kappa_bytes, hash_input, (size_t) (params->kappa_bytes + params->pk_size), params->kappa_bytes);
+    memcpy(hash_input, m, PARAMS_KAPPA_BYTES);
+    memcpy(hash_input + PARAMS_KAPPA_BYTES, pk, PARAMS_PK_SIZE);
+    hash(L_g_rho, 3U * PARAMS_KAPPA_BYTES, hash_input, (size_t) (PARAMS_KAPPA_BYTES + PARAMS_PK_SIZE) Params);
 
 #if defined(NIST_KAT_GENERATION) || defined(DEBUG)
-    print_hex("r5_cca_kem_encapsulate: m", m, params->kappa_bytes, 1);
-    print_hex("r5_cca_kem_encapsulate: L", L_g_rho, params->kappa_bytes, 1);
-    print_hex("r5_cca_kem_encapsulate: g", L_g_rho + params->kappa_bytes, params->kappa_bytes, 1);
-    print_hex("r5_cca_kem_encapsulate: rho", L_g_rho + 2 * params->kappa_bytes, params->kappa_bytes, 1);
+    print_hex("r5_cca_kem_encapsulate: m", m, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_encapsulate: L", L_g_rho, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_encapsulate: g", L_g_rho + PARAMS_KAPPA_BYTES, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_encapsulate: rho", L_g_rho + 2 * PARAMS_KAPPA_BYTES, PARAMS_KAPPA_BYTES, 1);
 #endif
 
     /* Encrypt m: ct = (U^T,v) */
-    r5_cpa_pke_encrypt(ct, pk, m, L_g_rho + 2 * params->kappa_bytes, params);
+    r5_cpa_pke_encrypt(ct, pk, m, L_g_rho + 2 * PARAMS_KAPPA_BYTES Params);
 
     /* Append g: ct = (U^T,v,g) */
-    memcpy(ct + params->ct_size, L_g_rho + params->kappa_bytes, params->kappa_bytes);
+    memcpy(ct + PARAMS_CT_SIZE, L_g_rho + PARAMS_KAPPA_BYTES, PARAMS_KAPPA_BYTES);
 
     /* k = H(L, ct) */
-    hash_input = checked_realloc(hash_input, (size_t) (params->kappa_bytes + params->ct_size + params->kappa_bytes));
-    memcpy(hash_input, L_g_rho, params->kappa_bytes);
-    memcpy(hash_input + params->kappa_bytes, ct, (size_t) (params->ct_size + params->kappa_bytes));
-    hash(k, params->kappa_bytes, hash_input, (size_t) (params->kappa_bytes + params->ct_size + params->kappa_bytes), params->kappa_bytes);
+    hash_input = checked_realloc(hash_input, (size_t) (PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES));
+    memcpy(hash_input, L_g_rho, PARAMS_KAPPA_BYTES);
+    memcpy(hash_input + PARAMS_KAPPA_BYTES, ct, (size_t) (PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES));
+    hash(k, PARAMS_KAPPA_BYTES, hash_input, (size_t) (PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES) Params);
 
     free(hash_input);
     free(L_g_rho);
@@ -102,47 +102,47 @@ int r5_cca_kem_encapsulate(unsigned char *ct, unsigned char *k, const unsigned c
     return 0;
 }
 
-int r5_cca_kem_decapsulate(unsigned char *k, const unsigned char *ct, const unsigned char *sk, const parameters *params) {
+int r5_cca_kem_decapsulate(unsigned char *k, const unsigned char *ct, const unsigned char *sk Parameters) {
     unsigned char *hash_input;
     unsigned char *m_prime;
     unsigned char *L_g_rho_prime;
     unsigned char *ct_prime;
-    const unsigned char *y = sk + params->kappa_bytes; /* y is located after the sk */
-    const unsigned char *pk = y + params->kappa_bytes; /* pk is located after y  */
+    const unsigned char *y = sk + PARAMS_KAPPA_BYTES; /* y is located after the sk */
+    const unsigned char *pk = y + PARAMS_KAPPA_BYTES; /* pk is located after y  */
 
     /* Allocate space */
-    hash_input = checked_malloc((size_t) (params->kappa_bytes + params->pk_size));
-    m_prime = checked_malloc(params->kappa_bytes);
-    L_g_rho_prime = checked_malloc(3U * params->kappa_bytes);
-    ct_prime = checked_malloc((size_t) (params->ct_size + params->kappa_bytes));
+    hash_input = checked_malloc((size_t) (PARAMS_KAPPA_BYTES + PARAMS_PK_SIZE));
+    m_prime = checked_malloc(PARAMS_KAPPA_BYTES);
+    L_g_rho_prime = checked_malloc(3U * PARAMS_KAPPA_BYTES);
+    ct_prime = checked_malloc((size_t) (PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES));
 
     /* Decrypt m' */
-    r5_cpa_pke_decrypt(m_prime, sk, ct, params);
+    r5_cpa_pke_decrypt(m_prime, sk, ct Params);
 
     /* Determine l', g', and rho' from m' */
-    memcpy(hash_input, m_prime, params->kappa_bytes);
-    memcpy(hash_input + params->kappa_bytes, pk, params->pk_size);
-    hash(L_g_rho_prime, 3U * params->kappa_bytes, hash_input, (size_t) (params->kappa_bytes + params->pk_size), params->kappa_bytes);
+    memcpy(hash_input, m_prime, PARAMS_KAPPA_BYTES);
+    memcpy(hash_input + PARAMS_KAPPA_BYTES, pk, PARAMS_PK_SIZE);
+    hash(L_g_rho_prime, 3U * PARAMS_KAPPA_BYTES, hash_input, (size_t) (PARAMS_KAPPA_BYTES + PARAMS_PK_SIZE) Params);
 
 #if defined(NIST_KAT_GENERATION) || defined(DEBUG)
-    print_hex("r5_cca_kem_decapsulate: m_prime", m_prime, params->kappa_bytes, 1);
-    print_hex("r5_cca_kem_decapsulate: L_prime", L_g_rho_prime, params->kappa_bytes, 1);
-    print_hex("r5_cca_kem_decapsulate: g_prime", L_g_rho_prime + params->kappa_bytes, params->kappa_bytes, 1);
-    print_hex("r5_cca_kem_decapsulate: rho_prime", L_g_rho_prime + 2 * params->kappa_bytes, params->kappa_bytes, 1);
+    print_hex("r5_cca_kem_decapsulate: m_prime", m_prime, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_decapsulate: L_prime", L_g_rho_prime, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_decapsulate: g_prime", L_g_rho_prime + PARAMS_KAPPA_BYTES, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cca_kem_decapsulate: rho_prime", L_g_rho_prime + 2 * PARAMS_KAPPA_BYTES, PARAMS_KAPPA_BYTES, 1);
 #endif
 
     /* Encrypt m: ct' = (U'^T,v') */
-    r5_cpa_pke_encrypt(ct_prime, pk, m_prime, L_g_rho_prime + 2 * params->kappa_bytes, params);
+    r5_cpa_pke_encrypt(ct_prime, pk, m_prime, L_g_rho_prime + 2 * PARAMS_KAPPA_BYTES Params);
     /* Append g': ct' = (U'^T,v',g') */
-    memcpy(ct_prime + params->ct_size, L_g_rho_prime + params->kappa_bytes, params->kappa_bytes);
+    memcpy(ct_prime + PARAMS_CT_SIZE, L_g_rho_prime + PARAMS_KAPPA_BYTES, PARAMS_KAPPA_BYTES);
 
     /* k = H(L', ct') or k = H(y, ct') depending on fail status */
-    hash_input = checked_realloc(hash_input, (size_t) (params->kappa_bytes + params->ct_size + params->kappa_bytes));
-    uint8_t fail = (uint8_t) verify(ct, ct_prime, (size_t) (params->ct_size + params->kappa_bytes));
-    memcpy(hash_input, L_g_rho_prime, params->kappa_bytes);
-    memcpy(hash_input + params->kappa_bytes, ct_prime, (size_t) (params->ct_size + params->kappa_bytes));
-    conditional_constant_time_memcpy(hash_input, y, params->kappa_bytes, fail); /* Overwrite L' with y in case of failure */
-    hash(k, params->kappa_bytes, hash_input, (size_t) (params->kappa_bytes + params->ct_size + params->kappa_bytes), params->kappa_bytes);
+    hash_input = checked_realloc(hash_input, (size_t) (PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES));
+    uint8_t fail = (uint8_t) verify(ct, ct_prime, (size_t) (PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES));
+    memcpy(hash_input, L_g_rho_prime, PARAMS_KAPPA_BYTES);
+    memcpy(hash_input + PARAMS_KAPPA_BYTES, ct_prime, (size_t) (PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES));
+    conditional_constant_time_memcpy(hash_input, y, PARAMS_KAPPA_BYTES, fail); /* Overwrite L' with y in case of failure */
+    hash(k, PARAMS_KAPPA_BYTES, hash_input, (size_t) (PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES) Params);
 
     free(hash_input);
     free(m_prime);

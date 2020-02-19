@@ -13,7 +13,7 @@
 
 #include <stddef.h>
 
-#include "parameters.h"
+#include "chooseparameters.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +29,7 @@ extern "C" {
      * @param[in]  params the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int create_A(uint16_t *A, const unsigned char *sigma, const parameters *params);
+    int create_A(uint16_t *A, const unsigned char *sigma Parameters);
 
     /**
      * Creates random __S<sup>T</sup>__ from the given parameters.
@@ -41,7 +41,7 @@ extern "C" {
      * @param[in]  params  the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int create_S_T(int16_t *S_T, const unsigned char *sk, const parameters *params);
+    int create_S_T(int16_t *S_T, const unsigned char *sk Parameters);
 
     /**
      * Creates __R<sup>T</sup>__ from the given parameters and seed rho.
@@ -53,7 +53,7 @@ extern "C" {
      * @param[in]  params   the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int create_R_T(int16_t *R_T, const unsigned char *rho, const parameters *params);
+    int create_R_T(int16_t *R_T, const unsigned char *rho Parameters);
 
     /**
      * Computes _result = left * right_

@@ -9,15 +9,21 @@
 implementations = reference configurable optimized
 clean_implementations = $(addprefix clean-,$(implementations))
 doc_implementations = $(addprefix doc-,$(implementations))
+aflfuzzer_implementations = $(addprefix aflfuzzer-,$(implementations))
+libfuzzer_implementations = $(addprefix libfuzzer-,$(implementations))
 
 build: $(implementations)
 
 all: build doc
 
+speedtest:
+	@./runSpeedTests
 
 doc: $(doc_implementations)
 
+aflfuzzer: $(aflfuzzer_implementations)
 
+libfuzzer: $(libfuzzer_implementations)
 
 clean: $(clean_implementations)
 
@@ -27,9 +33,13 @@ $(implementations):
 $(doc_implementations):
 	@$(MAKE) -C $(patsubst doc-%,%,$@) doc
 
+$(aflfuzzer_implementations):
+	@$(MAKE) -C $(patsubst aflfuzzer-%,%,$@) aflfuzzer
 
+$(libfuzzer_implementations):
+	@$(MAKE) -C $(patsubst libfuzzer-%,%,$@) libfuzzer
 
 $(clean_implementations):
 	@$(MAKE) -C $(patsubst clean-%,%,$@) clean
 
-.PHONY: build all $(implementations) doc $(doc_implementations) clean $(clean_implementations)
+.PHONY: build all $(implementations) speedtest doc $(doc_implementations) aflfuzzer $(aflfuzzer_implementations) libfuzzer $(libfuzzer_implementations) clean $(clean_implementations)

@@ -25,27 +25,27 @@
  * Public functions
  ******************************************************************************/
 
-int r5_cca_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters * params) {
-    return r5_cca_kem_keygen(pk, sk, params);
+int r5_cca_pke_keygen(unsigned char *pk, unsigned char *sk Parameters) {
+    return r5_cca_kem_keygen(pk, sk Params);
 }
 
-int r5_cca_pke_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned char *m, const unsigned long long m_len, const unsigned char *pk, const parameters *params) {
+int r5_cca_pke_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned char *m, const unsigned long long m_len, const unsigned char *pk Parameters) {
     int result = -1;
-    const unsigned long long c1_len = (unsigned long long) (params->ct_size + params->kappa_bytes);
+    const unsigned long long c1_len = (unsigned long long) (PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES);
     unsigned char *c1 = checked_malloc(c1_len);
     unsigned long long c2_len;
-    unsigned char *k = checked_malloc(params->kappa_bytes);
+    unsigned char *k = checked_malloc(PARAMS_KAPPA_BYTES);
     *ct_len = 0;
 
     /* Determine c1 and k */
-    r5_cca_kem_encapsulate(c1, k, pk, params);
+    r5_cca_kem_encapsulate(c1, k, pk Params);
 
     /* Copy c1 into first part of ct */
     memcpy(ct, c1, c1_len);
     *ct_len = c1_len;
 
     /* Apply DEM to get second part of ct */
-    if (round5_dem(ct + c1_len, &c2_len, k, params->kappa_bytes, m, m_len)) {
+    if (round5_dem(ct + c1_len, &c2_len, k, PARAMS_KAPPA_BYTES, m, m_len Params)) {
         DEBUG_ERROR("Failed to apply DEM\n");
         goto done_encrypt;
     }
@@ -61,11 +61,11 @@ done_encrypt:
     return result;
 }
 
-int r5_cca_pke_decrypt(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, const unsigned long long ct_len, const unsigned char *sk, const parameters *params) {
+int r5_cca_pke_decrypt(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, const unsigned long long ct_len, const unsigned char *sk Parameters) {
     int result = -1;
-    unsigned char *k = checked_malloc(params->kappa_bytes);
+    unsigned char *k = checked_malloc(PARAMS_KAPPA_BYTES);
     const unsigned char * const c1 = ct;
-    const unsigned long long c1_len = (unsigned long long) (params->ct_size + params->kappa_bytes);
+    const unsigned long long c1_len = (unsigned long long) (PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES);
     const unsigned char * const c2 = ct + c1_len;
     const unsigned long c2_len = ct_len - c1_len;
     *m_len = 0;
@@ -77,10 +77,10 @@ int r5_cca_pke_decrypt(unsigned char *m, unsigned long long *m_len, const unsign
     }
 
     /* Determine k */
-    r5_cca_kem_decapsulate(k, c1, sk, params);
+    r5_cca_kem_decapsulate(k, c1, sk Params);
 
     /* Apply DEM-inverse to get m */
-    if (round5_dem_inverse(m, m_len, k, params->kappa_bytes, c2, c2_len)) {
+    if (round5_dem_inverse(m, m_len, k, PARAMS_KAPPA_BYTES, c2, c2_len Params)) {
         DEBUG_ERROR("Failed to apply DEM-inverse\n");
         goto done_decrypt;
     }

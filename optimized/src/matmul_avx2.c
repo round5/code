@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Koninklijke Philips N.V.
+ * Copyright (c) 2020, Koninklijke Philips N.V.
  *
  */
 
@@ -10,7 +10,6 @@
 #if PARAMS_K !=1 && defined(AVX2)
 
 #include "misc.h"
-#include "probe_cm.h"
 #include "drbg.h"
 #include "little_endian.h"
 
@@ -286,78 +285,20 @@ void inner8 ( modq_t *vx, int16_t *vy, modq_t *a ) {
 //
 // B = A * S
 //
-void matmul_as_q(modq_t d[PARAMS_D][PARAMS_N_BAR], modq_t matrix(a), int16_t s_t[PARAMS_N_BAR][PARAMS_D]) {
+void matmul_as_q(modq_t d[PARAMS_D][PARAMS_N_BAR], modq_t matrix(a), tern_secret_s secret_vector){
+    
     size_t r, l;
     for (r = 0; r < PARAMS_D; r++) {
         for (l = 0; l < (PARAMS_N_BAR/8) * 8; l+=8)
-        Inner(8)(access(a,r), s_t[l], &d[r][l]);
+        Inner(8)(access(a,r), secret_vector[l], &d[r][l]);
 #if ( PARAMS_N_BAR % 8 != 0 )
-        Inner(parallel)(access(a,r), s_t[(PARAMS_N_BAR/8) * 8], &d[r][(PARAMS_N_BAR/8) * 8]);
+        Inner(parallel)(access(a,r), secret_vector[(PARAMS_N_BAR/8) * 8], &d[r][(PARAMS_N_BAR/8) * 8]);
 #endif
     }
 }
 
-//
-// U^T = R^T * A
-//
-/*
- void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t matrix(a), int16_t r_t[PARAMS_M_BAR][PARAMS_D]) {
- 
- size_t block_r, r, c, l;
- 
- modq_t * row __attribute__ ((aligned(32)));
- memset(d, 0, PARAMS_M_BAR * PARAMS_D * sizeof (modq_t));
- 
- __m256i accum[PARAMS_M_BAR * PARAMS_D / 16] __attribute__ ((aligned(32)));
- for (l = 0; l < PARAMS_M_BAR; l++) {
- for (c = 0; c < 16 * (PARAMS_D / 16); c += 16) {
- accum[(l * BLOCK_SIZE_COL + c) >> 4] = _mm256_setzero_si256();
- }
- }
- 
- for (block_r = 0; block_r < PARAMS_D / BLOCK_SIZE_ROW; block_r++) {
- row = access(a,block_r * BLOCK_SIZE_ROW + r);
- for (c = 0; c < BLOCK_SIZE_COL / BLOCK_AVX; c++) {
- for (l = 0; l < PARAMS_M_BAR; l++) {
- accum[l * BLOCK_SIZE_COL / BLOCK_AVX + c] = _mm256_add_epi16(accum[l * BLOCK_SIZE_COL / BLOCK_AVX + c], vMul(vSet(r_t[l][block_r]), vGet(&row[c * BLOCK_AVX])));
- }
- }
- #if PARAMS_D/BLOCK_AVX != 0
- for (c = BLOCK_AVX * (BLOCK_SIZE_COL / BLOCK_AVX); c < BLOCK_SIZE_COL; c++) {
- for (r = 0; r < PARAMS_M_BAR; r++) {
- d[r][c] += r_t[r][block_r] * row[c];
- }
- }
- #endif
- }
- for (l = 0; l < PARAMS_M_BAR; l++) {
- for (c = 0; c < BLOCK_AVX * (BLOCK_SIZE_COL / BLOCK_AVX); c += BLOCK_AVX) {
- _mm256_storeu_si256((__m256i *) &(d[l][c]), accum[(l * BLOCK_SIZE_COL + c) >> 4]);
- }
- }
- }
- */
-/*
- void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t matrix(a), int16_t r_t[PARAMS_M_BAR][PARAMS_D]) {
- size_t r, c, l;
- modq_t * row __attribute__ ((aligned(32)));
- 
- memset(d, 0, PARAMS_M_BAR * PARAMS_D * sizeof (modq_t));
- for (l = 0; l < PARAMS_D ; l++) {
- row = access(a,l);
- __m256i * accum __attribute__ ((aligned(32)));
- for (r = 0; r < PARAMS_M_BAR; r++) {
- accum = (__m256i *) &d[r][0];
- for (c = 0; c < (PARAMS_D/16); c+=1)
- vPut(accum+c, vAdd(_mm256_load_si256(accum+c), vMul(vSet(r_t[r][l]), vGet(&row[c<<4]))));
- for (c = (PARAMS_D/16)*16 ;  c < PARAMS_D ;c++)
- d[r][c] +=  r_t[r][l] * row[c];
- }
- }
- }
- */
-
-void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t matrix(a), int16_t r_t[PARAMS_M_BAR][PARAMS_D]) {
+void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t matrix(a), tern_secret_r secret_vector){
+    
     size_t r, c, l;
     modq_t * row __attribute__ ((aligned(32)));
     
@@ -375,13 +316,13 @@ void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t matrix(a), int16_t r_
         for (c = 0; c < (PARAMS_D/16) ; c+=1)
         for (r = 0; r < PARAMS_M_BAR; r++)
         {
-            accum[r * BLOCK_SIZE_COL / BLOCK_AVX + c] = vAdd( accum[r * BLOCK_SIZE_COL / BLOCK_AVX + c], vMul(vSet(r_t[r][l]), vGet(&row[c<<4])));
+            accum[r * BLOCK_SIZE_COL / BLOCK_AVX + c] = vAdd( accum[r * BLOCK_SIZE_COL / BLOCK_AVX + c], vMul(vSet(secret_vector[r][l]), vGet(&row[c<<4])));
             //vPut(&d[r][c], vAdd(vGet(&d[r][c]), vMul(vSet(r_t[r][l]), vGet(&row[c<<4]))));
         }
 #if PARAMS_D % 16 != 0
         for (c = (PARAMS_D/16)*16 ;  c < PARAMS_D ;c++)
         for (r = 0; r < PARAMS_M_BAR; r++)
-        d[r][c] +=  r_t[r][l] * row[c];
+        d[r][c] +=  secret_vector[r][l] * row[c];
     }
 #endif
     for (l = 0; l < PARAMS_M_BAR; l++) {
@@ -395,11 +336,12 @@ void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t matrix(a), int16_t r_
 // X' = S^T * U
 //
 // assumption: PARAMS_MU <= PARAMS_N_BAR * PARAMS_N_BAR
-void matmul_stu_p(modp_t d[PARAMS_MU], modp_t u_t[PARAMS_M_BAR][PARAMS_D], int16_t s_t[PARAMS_N_BAR][PARAMS_D]) {
+void matmul_stu_p(modp_t d[PARAMS_MU], modp_t u_t[PARAMS_M_BAR][PARAMS_D], tern_secret_s secret_vector){
+    
     size_t l, j;
     size_t index = 0;
     for (l = 0; l < PARAMS_N_BAR && index < PARAMS_MU; l++)
     for (j = 0; j < PARAMS_M_BAR && index < PARAMS_MU; j++)
-    Inner(1)(u_t[j], s_t[l], &d[index++]);
+    Inner(1)(u_t[j], secret_vector[l], &d[index++]);
 }
 #endif /* PARAMS_K !=1 && defined(AVX2) */

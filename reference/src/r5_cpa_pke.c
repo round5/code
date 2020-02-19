@@ -91,7 +91,7 @@ static int diff_msg(uint16_t *result, const size_t len, const uint16_t *matrix_a
  * Public functions
  ******************************************************************************/
 
-int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *params) {
+int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk Parameters) {
     unsigned char *sigma;
     uint16_t *A;
     int16_t *S;
@@ -102,50 +102,50 @@ int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *pa
     size_t len_b;
 
     /* Calculate sizes */
-    len_a = (size_t) (params->k * params->k * params->n);
-    len_s = (size_t) (params->k * params->n_bar * params->n);
-    len_b = (size_t) (params->k * params->n_bar * params->n);
+    len_a = (size_t) (PARAMS_K * PARAMS_K * PARAMS_N);
+    len_s = (size_t) (PARAMS_K * PARAMS_N_BAR * PARAMS_N);
+    len_b = (size_t) (PARAMS_K * PARAMS_N_BAR * PARAMS_N);
 
     /* Allocate space */
-    sigma = checked_malloc(params->kappa_bytes);
+    sigma = checked_malloc(PARAMS_KAPPA_BYTES);
     A = checked_malloc(len_a * sizeof (*A));
     S = checked_malloc(len_s * sizeof (*S));
     S_T = checked_malloc(len_s * sizeof (*S_T));
     B = checked_malloc(len_b * sizeof (*B));
 
     /* Generate seed sigma */
-    randombytes(sigma, params->kappa_bytes);
+    randombytes(sigma, PARAMS_KAPPA_BYTES);
 
     /* Create A from sigma */
-    create_A(A, sigma, params);
+    create_A(A, sigma Params);
 
     /* Generate sk (seed) */
-    randombytes(sk, params->kappa_bytes);
+    randombytes(sk, PARAMS_KAPPA_BYTES);
 
     /* Generate S_T from sk */
-    create_S_T(S_T, sk, params);
+    create_S_T(S_T, sk Params);
 
     /* Transpose S_T to get S */
-    transpose_matrix((uint16_t *) S, (uint16_t *) S_T, params->n_bar, params->k, params->n);
+    transpose_matrix((uint16_t *) S, (uint16_t *) S_T, PARAMS_N_BAR, PARAMS_K, PARAMS_N);
 
     /* B = A * S */
-    mult_matrix(B, (int16_t *) A, params->k, params->k, S, params->k, params->n_bar, params->n, params->q, 0);
+    mult_matrix(B, (int16_t *) A, PARAMS_K, PARAMS_K, S, PARAMS_K, PARAMS_N_BAR, PARAMS_N, PARAMS_Q, 0);
 
 #if defined(NIST_KAT_GENERATION) || defined(DEBUG)
-    printf("r5_cpa_pke_keygen: tau=%hhu\n", params->tau);
-    print_hex("r5_cpa_pke_keygen: sigma", sigma, params->kappa_bytes, 1);
+    printf("r5_cpa_pke_keygen: tau=%hhu\n", PARAMS_TAU);
+    print_hex("r5_cpa_pke_keygen: sigma", sigma, PARAMS_KAPPA_BYTES, 1);
 #ifdef DEBUG
-    print_sage_u_vector_matrix("r5_cpa_pke_keygen: A", A, params->k, params->k, params->n);
-    print_sage_u_vector_matrix("r5_cpa_pke_keygen: uncompressed B", B, params->k, params->n_bar, params->n);
-    print_sage_s_vector_matrix("r5_cpa_pke_keygen: S_T", S_T, params->n_bar, params->k, params->n);
+    print_sage_u_vector_matrix("r5_cpa_pke_keygen: A", A, PARAMS_K, PARAMS_K, PARAMS_N);
+    print_sage_u_vector_matrix("r5_cpa_pke_keygen: uncompressed B", B, PARAMS_K, PARAMS_N_BAR, PARAMS_N);
+    print_sage_s_vector_matrix("r5_cpa_pke_keygen: S_T", S_T, PARAMS_N_BAR, PARAMS_K, PARAMS_N);
 #endif
 #endif
 
     /* Compress B q_bits -> p_bits with flooring */
-    round_matrix(B, (size_t) (params->k * params->n_bar), params->n, params->q_bits, params->p_bits, params->h1);
+    round_matrix(B, (size_t) (PARAMS_K * PARAMS_N_BAR), PARAMS_N, PARAMS_Q_BITS, PARAMS_P_BITS, PARAMS_H1);
 
     /* Serializing and packing */
-    pack_pk(pk, sigma, params->kappa_bytes, B, len_b, params->p_bits);
+    pack_pk(pk, sigma, PARAMS_KAPPA_BYTES, B, len_b, PARAMS_P_BITS);
 
     free(sigma);
     free(A);
@@ -156,7 +156,7 @@ int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *pa
     return 0;
 }
 
-int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigned char *m, const unsigned char *rho, const parameters *params) {
+int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigned char *m, const unsigned char *rho Parameters) {
     /* Seeds */
     unsigned char *sigma;
 
@@ -181,14 +181,14 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     size_t len_x;
     size_t len_m1;
 
-    len_a = (size_t) (params->k * params->k * params->n);
-    len_r = (size_t) (params->k * params->m_bar * params->n);
-    len_u = (size_t) (params->k * params->m_bar * params->n);
-    len_b = (size_t) (params->k * params->n_bar * params->n);
-    len_x = (size_t) (params->n_bar * params->m_bar * params->n);
-    len_m1 = (size_t) BITS_TO_BYTES(params->mu * params->b_bits);
+    len_a = (size_t) (PARAMS_K * PARAMS_K * PARAMS_N);
+    len_r = (size_t) (PARAMS_K * PARAMS_M_BAR * PARAMS_N);
+    len_u = (size_t) (PARAMS_K * PARAMS_M_BAR * PARAMS_N);
+    len_b = (size_t) (PARAMS_K * PARAMS_N_BAR * PARAMS_N);
+    len_x = (size_t) (PARAMS_N_BAR * PARAMS_M_BAR * PARAMS_N);
+    len_m1 = (size_t) BITS_TO_BYTES(PARAMS_MU * PARAMS_B_BITS);
 
-    sigma = checked_malloc(params->kappa_bytes);
+    sigma = checked_malloc(PARAMS_KAPPA_BYTES);
     A = checked_malloc(len_a * sizeof (*A));
     A_T = checked_malloc(len_a * sizeof (*A_T));
     R = checked_malloc(len_r * sizeof (*R));
@@ -198,79 +198,79 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     B = checked_malloc(len_b * sizeof (*B));
     B_T = checked_malloc(len_b * sizeof (*B_T));
     X = checked_malloc(len_x * sizeof (*X));
-    v = checked_malloc(params->mu * sizeof (*v));
+    v = checked_malloc(PARAMS_MU * sizeof (*v));
     m1 = checked_malloc(len_m1 * sizeof (*m1));
 
     /* Unpack received public key into sigma and B */
-    unpack_pk(sigma, B, pk, params->kappa_bytes, len_b, params->p_bits);
+    unpack_pk(sigma, B, pk, PARAMS_KAPPA_BYTES, len_b, PARAMS_P_BITS);
 
     /* Create A from sigma */
-    create_A(A, sigma, params);
+    create_A(A, sigma Params);
 
     /* Create R_T from rho */
-    create_R_T(R_T, rho, params);
+    create_R_T(R_T, rho Params);
 
     /* Transpose A */
-    transpose_matrix(A_T, A, params->k, params->k, params->n);
+    transpose_matrix(A_T, A, PARAMS_K, PARAMS_K, PARAMS_N);
 
     /* Transpose R_T to get R */
-    transpose_matrix((uint16_t *) R, (uint16_t *) R_T, params->m_bar, params->k, params->n);
+    transpose_matrix((uint16_t *) R, (uint16_t *) R_T, PARAMS_M_BAR, PARAMS_K, PARAMS_N);
 
     /* U = A^T * R */
-    mult_matrix(U, (int16_t *) A_T, params->k, params->k, R, params->k, params->m_bar, params->n, params->q, 0);
+    mult_matrix(U, (int16_t *) A_T, PARAMS_K, PARAMS_K, R, PARAMS_K, PARAMS_M_BAR, PARAMS_N, PARAMS_Q, 0);
 
 
 #ifdef DEBUG
-    print_hex("r5_cpa_pke_encrypt: m", m, params->kappa_bytes, 1);
+    print_hex("r5_cpa_pke_encrypt: m", m, PARAMS_KAPPA_BYTES, 1);
 #endif
 #if defined(NIST_KAT_GENERATION) || defined(DEBUG)
-    print_hex("r5_cpa_pke_encrypt: rho", rho, params->kappa_bytes, 1);
-    print_hex("r5_cpa_pke_encrypt: sigma", sigma, params->kappa_bytes, 1);
+    print_hex("r5_cpa_pke_encrypt: rho", rho, PARAMS_KAPPA_BYTES, 1);
+    print_hex("r5_cpa_pke_encrypt: sigma", sigma, PARAMS_KAPPA_BYTES, 1);
 #ifdef DEBUG
-    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: A", A, params->k, params->k, params->n);
-    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: B", B, params->k, params->n_bar, params->n);
-    print_sage_s_vector_matrix("r5_cpa_pke_encrypt: R_T", R_T, params->m_bar, params->k, params->n);
-    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: uncompressed U", U, params->k, params->m_bar, params->n);
+    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: A", A, PARAMS_K, PARAMS_K, PARAMS_N);
+    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: B", B, PARAMS_K, PARAMS_N_BAR, PARAMS_N);
+    print_sage_s_vector_matrix("r5_cpa_pke_encrypt: R_T", R_T, PARAMS_M_BAR, PARAMS_K, PARAMS_N);
+    print_sage_u_vector_matrix("r5_cpa_pke_encrypt: uncompressed U", U, PARAMS_K, PARAMS_M_BAR, PARAMS_N);
 #endif
 #endif
 
     /* Compress U q_bits -> p_bits with flooring */
-    round_matrix(U, (size_t) (params->k * params->m_bar), params->n, params->q_bits, params->p_bits, params->h2);
+    round_matrix(U, (size_t) (PARAMS_K * PARAMS_M_BAR), PARAMS_N, PARAMS_Q_BITS, PARAMS_P_BITS, PARAMS_H2);
 
     /* Transpose U */
-    transpose_matrix(U_T, U, params->k, params->m_bar, params->n);
+    transpose_matrix(U_T, U, PARAMS_K, PARAMS_M_BAR, PARAMS_N);
 
     /* Transpose B */
-    transpose_matrix(B_T, B, params->k, params->n_bar, params->n);
+    transpose_matrix(B_T, B, PARAMS_K, PARAMS_N_BAR, PARAMS_N);
 
     /* X = B^T * R */
-    mult_matrix(X, (int16_t *) B_T, params->n_bar, params->k, R, params->k, params->m_bar, params->n, params->p, params->xe != 0 || params->f != 0);
+    mult_matrix(X, (int16_t *) B_T, PARAMS_N_BAR, PARAMS_K, R, PARAMS_K, PARAMS_M_BAR, PARAMS_N, PARAMS_P, PARAMS_XE != 0 || PARAMS_F != 0);
 #ifdef DEBUG
-    print_sage_u_vector("r5_cpa_pke_encrypt: uncompressed X", X, params->mu);
+    print_sage_u_vector("r5_cpa_pke_encrypt: uncompressed X", X, PARAMS_MU);
 #endif
 
     /* v is a matrix of scalars, so we use 1 as the number of coefficients */
-    round_matrix(X, params->mu, 1, params->p_bits, params->t_bits, params->h2);
+    round_matrix(X, PARAMS_MU, 1, PARAMS_P_BITS, PARAMS_T_BITS, PARAMS_H2);
 
     /* Compute codeword */
-    memcpy(m1, m, params->kappa_bytes);
-    memset(m1 + params->kappa_bytes, 0, (size_t) (len_m1 - params->kappa_bytes));
-    if (params->xe != 0) {
-        xef_compute(m1, params->kappa_bytes, params->f);
+    memcpy(m1, m, PARAMS_KAPPA_BYTES);
+    memset(m1 + PARAMS_KAPPA_BYTES, 0, (size_t) (len_m1 - PARAMS_KAPPA_BYTES));
+    if (PARAMS_XE != 0) {
+        xef_compute(m1, PARAMS_KAPPA_BYTES, PARAMS_F);
     }
 
     /* Add message (mod t) */
-    add_msg(v, params->mu, X, m1, params->b_bits, params->t_bits);
+    add_msg(v, PARAMS_MU, X, m1, PARAMS_B_BITS, PARAMS_T_BITS);
 
     /* Transpose U */
-    transpose_matrix(U_T, U, params->k, params->m_bar, params->n);
+    transpose_matrix(U_T, U, PARAMS_K, PARAMS_M_BAR, PARAMS_N);
 
     /* Pack ciphertext */
-    pack_ct(ct, U_T, len_u, params->p_bits, v, params->mu, params->t_bits);
+    pack_ct(ct, U_T, len_u, PARAMS_P_BITS, v, PARAMS_MU, PARAMS_T_BITS);
 
 #if defined(NIST_KAT_GENERATION) || defined(DEBUG)
 #ifdef DEBUG
-    print_sage_u_vector("r5_cpa_pke_encrypt: v", v, params->mu);
+    print_sage_u_vector("r5_cpa_pke_encrypt: v", v, PARAMS_MU);
 #endif
     print_hex("r5_cpa_pke_encrypt: m1", m1, len_m1, 1);
 #endif
@@ -291,7 +291,7 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     return 0;
 }
 
-int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned char *ct, const parameters *params) {
+int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned char *ct Parameters) {
     /* Matrices, vectors, bit strings */
     int16_t *S_T;
     uint16_t *U;
@@ -307,74 +307,74 @@ int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned
     size_t len_x_prime;
     size_t len_m1;
 
-    len_s = (size_t) (params->k * params->n_bar * params->n);
-    len_u = (size_t) (params->k * params->m_bar * params->n);
-    len_x_prime = (size_t) (params->n_bar * params->m_bar * params->n);
+    len_s = (size_t) (PARAMS_K * PARAMS_N_BAR * PARAMS_N);
+    len_u = (size_t) (PARAMS_K * PARAMS_M_BAR * PARAMS_N);
+    len_x_prime = (size_t) (PARAMS_N_BAR * PARAMS_M_BAR * PARAMS_N);
 
     S_T = checked_malloc(len_s * sizeof (*S_T));
     U = checked_malloc(len_u * sizeof (*U));
     U_T = checked_malloc(len_u * sizeof (*U));
-    v = checked_malloc(params->mu * sizeof (*v));
+    v = checked_malloc(PARAMS_MU * sizeof (*v));
     X_prime = checked_malloc(len_x_prime * sizeof (*X_prime));
-    m2 = checked_malloc(params->mu * sizeof (*m2));
+    m2 = checked_malloc(PARAMS_MU * sizeof (*m2));
 
     /* Message plus error correction */
-    len_m1 = (size_t) BITS_TO_BYTES(params->mu * params->b_bits);
+    len_m1 = (size_t) BITS_TO_BYTES(PARAMS_MU * PARAMS_B_BITS);
     m1 = checked_calloc(len_m1, 1);
 
     /* Generate S_T from sk */
-    create_S_T(S_T, sk, params);
+    create_S_T(S_T, sk Params);
 
     /* Unpack cipher text */
-    unpack_ct(U_T, v, ct, len_u, params->p_bits, params->mu, params->t_bits);
+    unpack_ct(U_T, v, ct, len_u, PARAMS_P_BITS, PARAMS_MU, PARAMS_T_BITS);
 
     /* Transpose U^T */
-    transpose_matrix(U, U_T, params->m_bar, params->k, params->n);
+    transpose_matrix(U, U_T, PARAMS_M_BAR, PARAMS_K, PARAMS_N);
 
 #ifdef DEBUG
-    print_sage_u_vector_matrix("r5_cpa_pke_decrypt: compressed U", U, params->k, params->m_bar, params->n);
-    print_sage_u_vector("r5_cpa_pke_decrypt: compressed v", v, params->mu);
+    print_sage_u_vector_matrix("r5_cpa_pke_decrypt: compressed U", U, PARAMS_K, PARAMS_M_BAR, PARAMS_N);
+    print_sage_u_vector("r5_cpa_pke_decrypt: compressed v", v, PARAMS_MU);
 #endif
 
     /* Decompress v t -> p */
-    decompress_matrix(v, params->mu, 1, params->t_bits, params->p_bits);
+    decompress_matrix(v, PARAMS_MU, 1, PARAMS_T_BITS, PARAMS_P_BITS);
 
     /* X' = S^T * U */
-    mult_matrix(X_prime, S_T, params->n_bar, params->k, (int16_t *) U, params->k, params->m_bar, params->n, params->p, params->xe != 0 || params->f != 0);
+    mult_matrix(X_prime, S_T, PARAMS_N_BAR, PARAMS_K, (int16_t *) U, PARAMS_K, PARAMS_M_BAR, PARAMS_N, PARAMS_P, PARAMS_XE != 0 || PARAMS_F != 0);
 
 #ifdef DEBUG
-    print_sage_u_vector("r5_cpa_pke_decrypt: X'", X_prime, params->mu);
+    print_sage_u_vector("r5_cpa_pke_decrypt: X'", X_prime, PARAMS_MU);
 #endif
 
     /* v - X' (mod p) */
-    diff_msg(m2, params->mu, v, X_prime, params->p);
+    diff_msg(m2, PARAMS_MU, v, X_prime, PARAMS_P);
 
 #ifdef DEBUG
-    print_sage_u_vector("r5_cpa_pke_decrypt: uncompressed m2", m2, params->mu);
+    print_sage_u_vector("r5_cpa_pke_decrypt: uncompressed m2", m2, PARAMS_MU);
 #endif
 
     /* Compress msg p -> B */
-    round_matrix(m2, params->mu, 1, params->p_bits, params->b_bits, params->h3);
+    round_matrix(m2, PARAMS_MU, 1, PARAMS_P_BITS, PARAMS_B_BITS, PARAMS_H3);
 
 #ifdef DEBUG
-    print_sage_u_vector("r5_cpa_pke_decrypt: m2", m2, params->mu);
+    print_sage_u_vector("r5_cpa_pke_decrypt: m2", m2, PARAMS_MU);
 #endif
 
     /* Convert the message to bit string format */
-    pack(m1, m2, params->mu, params->b_bits);
+    pack(m1, m2, PARAMS_MU, PARAMS_B_BITS);
 
 #ifdef DEBUG
     print_hex("r5_cpa_pke_decrypt: m1", m1, len_m1, 1);
 #endif
 
-    if (params->xe != 0) {
-        xef_compute(m1, params->kappa_bytes, params->f);
-        xef_fixerr(m1, params->kappa_bytes, params->f);
+    if (PARAMS_XE != 0) {
+        xef_compute(m1, PARAMS_KAPPA_BYTES, PARAMS_F);
+        xef_fixerr(m1, PARAMS_KAPPA_BYTES, PARAMS_F);
     }
-    memcpy(m, m1, params->kappa_bytes);
+    memcpy(m, m1, PARAMS_KAPPA_BYTES);
 
 #if defined(NIST_KAT_GENERATION) || defined(DEBUG)
-    print_hex("r5_cpa_pke_decrypt: m", m, params->kappa_bytes, 1);
+    print_hex("r5_cpa_pke_decrypt: m", m, PARAMS_KAPPA_BYTES, 1);
 #endif
 
     free(S_T);

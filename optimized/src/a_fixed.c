@@ -29,7 +29,6 @@ int create_A_fixed(const unsigned char *seed) {
             memcpy(A_fixed + (2 * i) * PARAMS_D, A_fixed + i*PARAMS_D, PARAMS_D * sizeof (modq_t));
         }
     }
-
     return 0;
 #else
     (void) seed;

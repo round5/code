@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright (c) 2018, Koninklijke Philips N.V.
  */
 
@@ -45,20 +45,29 @@ static uint16_t modulo(const int32_t a, const uint32_t b) {
  * @param[out] vector    the generated vector
  * @param[in]  len       the length of the ternary vector to create
  * @param[in]  h         the hamming weight (i.e. number of non-zero elements)
+ * @param[in]  context   the context of drbg
  * @return __0__ in case of success
  */
-static int create_secret_vector(int16_t *vector, const uint16_t len, const uint16_t h) {
+
+//static int create_secret_vector(int16_t *vector, const uint16_t len, const uint16_t h, CContext context Parameters) {
+static int create_secret_vector(int16_t *vector, const uint16_t len, const uint16_t h, drbg_ctx context Parameters) {
+
+    const uint32_t range_divisor = (uint32_t) (0x10000 / len); 
+    const uint32_t range_limit = len * range_divisor;
+
     size_t i;
     uint16_t idx;
     memset(vector, 0, sizeof (*vector) * len);
 
     for (i = 0; i < h; ++i) {
-        do {
-            idx = drbg_sampler16(len);
+        do {   
+		do { 
+			drbg_sampler16_2_reference(context, idx); 
+		    } while (idx >= range_limit);
+		idx =  (uint16_t) (idx / range_divisor);
         } while (vector[idx] != 0);
         vector[idx] = (i & 1) ? -1 : 1;
     }
-
     return 0;
 }
 
@@ -86,7 +95,6 @@ static int mult_poly_ntru(uint16_t *result, const int16_t *pol_a, const int16_t 
             result[deg] = modulo(result[deg] + tmp, mod);
         }
     }
-
     return 0;
 }
 
@@ -229,13 +237,13 @@ static int round_element(uint16_t *x, const uint16_t a_bits, const uint16_t b_bi
  * @param[out] x       the value to decompress
  * @param[in]  a_bits  compressed bit size
  * @param[in]  b_bits  decompressed bit size
- * @param[in]  b_mask  mask to perform module computation with b
  * @return __0__ in case of success
  */
-static int decompress_element(uint16_t *x, const uint16_t a_bits, const uint16_t b_bits, const uint16_t b_mask) {
+static int decompress_element(uint16_t *x, const uint16_t a_bits, const uint16_t b_bits) {
+    
     const uint16_t shift = (uint16_t) (b_bits - a_bits);
     *x = (uint16_t) (*x << shift);
-    *x &= b_mask;
+      
     return 0;
 }
 
@@ -252,17 +260,23 @@ static const uint8_t permutation_customization[2] = {0, 1};
  * @param[in]  params    the algorithm parameters in use
  * @return __0__ on success
  */
-static int permutation_tau_1(uint32_t *row_disp, const unsigned char *seed, const parameters *params) {
+static int permutation_tau_1(uint32_t *row_disp, const unsigned char *seed Parameters) {
     uint32_t i;
     uint16_t rnd;
 
-    drbg_init_customization(seed, params->kappa_bytes, permutation_customization, sizeof (permutation_customization));
+    const uint32_t range_divisor = (uint32_t) (0x10000 / PARAMS_D); 
+    const uint32_t range_limit = PARAMS_D * range_divisor;
 
-    for (i = 0; i < params->d; ++i) {
-        rnd = drbg_sampler16(params->d);
-        row_disp[i] = i * params->d + rnd;
+    /* Preferred a local context for the DRBG */
+
+    drbg_init_customization(seed, permutation_customization, sizeof (permutation_customization)); 
+
+    for (i = 0; i < PARAMS_D; ++i) {
+		do { drbg_sampler16_2(rnd); 
+		} while (rnd >= range_limit);
+		rnd =  (uint16_t) (rnd / range_divisor);
+        row_disp[i] = i * PARAMS_D + rnd;
     }
-
     return 0;
 }
 
@@ -274,23 +288,25 @@ static int permutation_tau_1(uint32_t *row_disp, const unsigned char *seed, cons
  * @param[in]  params    the algorithm parameters in use
  * @return __0__ on success
  */
-static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed, const parameters *params) {
+static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed Parameters) {
     uint32_t i;
     uint16_t rnd;
-    uint8_t *v = checked_calloc(params->tau2_len, 1);
+    uint8_t *v = checked_calloc(PARAMS_TAU2_LEN, 1);
 
-    drbg_init_customization(seed, params->kappa_bytes, permutation_customization, sizeof (permutation_customization));
+    drbg_init_customization(seed, permutation_customization, sizeof (permutation_customization)); 
 
-    for (i = 0; i < params->k; ++i) {
+    for (i = 0; i < PARAMS_K; ++i) {
         do {
-            rnd = drbg_sampler16_2(params->tau2_len);
-        } while (v[rnd]);
+        // rnd = drbg_sampler16_2(PARAMS_TAU2_LEN); // what is the argument doing here?
+        // void argument in defining declaration
+             drbg_sampler16_2(rnd);
+             rnd = (uint16_t) (rnd & (PARAMS_TAU2_LEN - 1 ));
+	} while (v[rnd]);
         v[rnd] = 1;
         row_disp[i] = rnd;
     }
 
     free(v);
-
     return 0;
 }
 
@@ -298,38 +314,38 @@ static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed, cons
  * Public functions
  ******************************************************************************/
 
-int create_A(uint16_t *A, const unsigned char *sigma, const parameters *params) {
+int create_A(uint16_t *A, const unsigned char *sigma Parameters) {
     uint32_t i;
     uint16_t *A_master = NULL;
     uint32_t *A_permutation = NULL;
-    const uint16_t els_row = (uint16_t) (params->k * params->n);
+    const uint16_t els_row = (uint16_t) (PARAMS_K * PARAMS_N);
 
     /* Create A/A_Master*/
-    assert(params->tau <= 2);
-    switch (params->tau) {
+    assert(PARAMS_TAU <= 2);
+    switch (PARAMS_TAU) {
         case 0:
-            create_A_random(A, sigma, params);
+            create_A_random(A, sigma Params);
             break;
         case 1:
-            assert(A_fixed != NULL && A_fixed_len == (size_t) (params->d * params->k));
+            assert(A_fixed != NULL && A_fixed_len == (size_t) (PARAMS_D * PARAMS_K));
             A_master = A_fixed;
             break;
         case 2:
-            A_master = checked_malloc((size_t) (params->tau2_len + params->d) * sizeof (*A_master));
-            create_A_random(A_master, sigma, params);
-            memcpy(A_master + params->tau2_len, A_master, params->d * sizeof (*A_master));
+            A_master = checked_malloc((size_t) (PARAMS_TAU2_LEN + PARAMS_D) * sizeof (*A_master));
+            create_A_random(A_master, sigma Params);
+            memcpy(A_master + PARAMS_TAU2_LEN, A_master, PARAMS_D * sizeof (*A_master));
             break;
     }
 
     /* Compute and apply the permutation to get A */
-    if (params->tau == 1 || params->tau == 2) {
-        A_permutation = checked_malloc(params->k * sizeof (*A_permutation));
+    if (PARAMS_TAU == 1 || PARAMS_TAU == 2) {
+        A_permutation = checked_malloc(PARAMS_K * sizeof (*A_permutation));
 
         /* Compute and apply permutation */
-        if (params->tau == 1) {
-            permutation_tau_1(A_permutation, sigma, params);
-            for (i = 0; i < params->k; ++i) {
-                uint32_t mod_d = A_permutation[i] % params->d;
+        if (PARAMS_TAU == 1) {
+            permutation_tau_1(A_permutation, sigma Params);
+            for (i = 0; i < PARAMS_K; ++i) {
+                uint32_t mod_d = A_permutation[i] % PARAMS_D;
                 if (mod_d == 0) {
                     memcpy(A + (i * els_row), A_master + A_permutation[i], els_row * sizeof (*A));
                 } else {
@@ -337,17 +353,17 @@ int create_A(uint16_t *A, const unsigned char *sigma, const parameters *params) 
                     memcpy(A + (i * els_row) + (els_row - mod_d), A_master + A_permutation[i] - mod_d, mod_d * sizeof (*A));
                 }
             }
-        } else if (params->tau == 2) {
-            permutation_tau_2(A_permutation, sigma, params);
-            for (i = 0; i < params->k; ++i) {
-                for (i = 0; i < params->k; ++i) {
+        } else if (PARAMS_TAU == 2) {
+            permutation_tau_2(A_permutation, sigma Params);
+            for (i = 0; i < PARAMS_K; ++i) {
+                for (i = 0; i < PARAMS_K; ++i) {
                     memcpy(A + (i * els_row), A_master + A_permutation[i], els_row * sizeof (*A));
                 }
             }
         }
 
         /* Free allocated memory */
-        if (params->tau == 2) {
+        if (PARAMS_TAU == 2) {
             free(A_master);
         }
         free(A_permutation);
@@ -356,34 +372,52 @@ int create_A(uint16_t *A, const unsigned char *sigma, const parameters *params) 
     return 0;
 }
 
-int create_S_T(int16_t *S_T, const unsigned char *sk, const parameters *params) {
-    size_t i;
-    const uint16_t len = (uint16_t) (params->k * params->n);
-
-    /* Initialize drbg */
-    drbg_init(sk, params->kappa_bytes);
-
-    /* Create rows of sparse vectors */
-    for (i = 0; i < params->n_bar; ++i) {
-        create_secret_vector(&S_T[i * len], len, params->h);
-    }
-
-    return 0;
+ int create_S_T(int16_t *S_T, const unsigned char *sk Parameters) {
+	size_t i, j;
+	const uint16_t len = (uint16_t) (PARAMS_K * PARAMS_N);
+	 
+	uint8_t iArray[sizeof(size_t)];
+	 
+	// custom_len = ceil((PARAMS_N_BAR - 1)/256)
+	size_t custom_len = 0;
+	if ( PARAMS_N_BAR > 1 ) { 
+		custom_len = sizeof(size_t); 
+	}
+	     
+	// Create rows of sparse vectors
+	for (i = 0; i < PARAMS_N_BAR; ++i) {
+		for (j = 0; j < sizeof(size_t); j++) { 
+			iArray[j] = (i>>(8*j)) & (0xFF); 
+		}
+		drbg_init_customization(sk, iArray, custom_len); 
+		create_secret_vector(&S_T[i * len], len, PARAMS_H, &context Params);
+	}
+	return 0;
 }
 
-int create_R_T(int16_t *R_T, const unsigned char *rho, const parameters *params) {
-    size_t i;
-    const uint16_t len = (uint16_t) (params->k * params->n);
+int create_R_T(int16_t *R_T, const unsigned char *rho Parameters) {
+	size_t i, j;
+	const uint16_t len = (uint16_t) (PARAMS_K * PARAMS_N);
 
-    /* Initialize drbg */
-    drbg_init(rho, params->kappa_bytes);
+	uint8_t iArray[sizeof(size_t)];
 
-    for (i = 0; i < params->m_bar; ++i) {
-        create_secret_vector(&R_T[i * len], len, params->h);
-    }
+	// custom_len = ceil((PARAMS_M_BAR - 1)/256)
+	size_t custom_len = 0;
+	if (PARAMS_M_BAR > 1) {
+		custom_len = sizeof(size_t);
+	}
 
-    return 0;
+	for (i = 0; i < PARAMS_M_BAR; ++i) {
+		for (j = 0; j < sizeof(size_t); j++) {
+			iArray[j] = (i>>(8*j)) & (0xFF);
+
+		}
+		drbg_init_customization(rho, iArray, custom_len);
+		create_secret_vector(&R_T[i * len], len, PARAMS_H, &context Params);
+	}
+	return 0;
 }
+
 
 int mult_matrix(uint16_t *result, const int16_t *left, const size_t l_rows, const size_t l_cols, const int16_t *right, const size_t r_rows, const size_t r_cols, const size_t els, const uint32_t mod, const int isXi) {
     assert(l_cols == r_rows);
@@ -423,9 +457,8 @@ int round_matrix(uint16_t *matrix, const size_t len, const size_t els, const uin
 int decompress_matrix(uint16_t *matrix, const size_t len, const size_t els, const uint16_t a_bits, const uint16_t b_bits) {
     size_t i;
 
-    const uint16_t b_mask = (uint16_t) (((uint16_t) 1 << b_bits) - 1);
     for (i = 0; i < len * els; ++i) {
-        decompress_element(matrix + i, a_bits, b_bits, b_mask);
+        decompress_element(matrix + i, a_bits, b_bits);
     }
 
     return 0;

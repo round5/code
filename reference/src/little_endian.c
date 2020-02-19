@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Koninklijke Philips N.V.
+ * Copyright (c) 2020, Koninklijke Philips N.V.
  */
 
 /**
@@ -9,7 +9,7 @@
 
 #include "little_endian.h"
 
-/* Force symbols to be emitted when no compiler optimisation is applied. */
+/* Force symbols to be emitted when no compiler optimization is applied. */
 extern inline uint8_t u8_from_le(const unsigned char *x);
 extern inline void u8_to_le(unsigned char *x, const uint8_t u);
 extern inline uint16_t u16_from_le(const unsigned char *x);

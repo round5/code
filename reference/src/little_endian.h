@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Koninklijke Philips N.V.
+ * Copyright (c) 2020, Koninklijke Philips N.V.
  */
 
 /**

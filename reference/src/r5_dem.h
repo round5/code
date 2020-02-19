@@ -11,6 +11,7 @@
 #define PST_DEM_H
 
 #include <stdint.h>
+#include "chooseparameters.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,7 +28,7 @@ extern "C" {
      * @param[in]  m_len  the length of the message
      * @return __0__ in case of success
      */
-    int round5_dem(unsigned char *c2, unsigned long long *c2_len, const unsigned char *key, const uint8_t key_len, const unsigned char *m, const unsigned long long m_len);
+    int round5_dem(unsigned char *c2, unsigned long long *c2_len, const unsigned char *key, const uint8_t key_len, const unsigned char *m, const unsigned long long m_len Parameters);
 
     /**
      * Inverses the application of a DEM to a message.
@@ -40,7 +41,7 @@ extern "C" {
      * @param[in]  c2_len  the length of the encapsulated message
      * @return __0__ in case of success
      */
-    int round5_dem_inverse(unsigned char *m, unsigned long long *m_len, const unsigned char *key, const uint8_t key_len, const unsigned char *c2, const unsigned long long c2_len);
+    int round5_dem_inverse(unsigned char *m, unsigned long long *m_len, const unsigned char *key, const uint8_t key_len, const unsigned char *c2, const unsigned long long c2_len Parameters);
 
 #ifdef __cplusplus
 }

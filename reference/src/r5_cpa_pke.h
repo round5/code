@@ -10,7 +10,7 @@
 #ifndef PST_ENCRYPT_H
 #define PST_ENCRYPT_H
 
-#include "parameters.h"
+#include "chooseparameters.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +24,7 @@ extern "C" {
      * @param[in]  params the algorithm parameters to use
      * @return __0__ in case of success
      */
-    int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *params);
+    int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk Parameters);
 
     /**
      * Encrypts a plaintext using the provided seed for R.
@@ -36,7 +36,7 @@ extern "C" {
      * @param[in]  params the algorithm parameters to use
      * @return __0__ in case of success
      */
-    int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigned char *m, const unsigned char *rho, const parameters *params);
+    int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigned char *m, const unsigned char *rho Parameters);
 
     /**
      * Decrypts a ciphertext.
@@ -47,7 +47,7 @@ extern "C" {
      * @param[in]  params the algorithm parameters to use
      * @return __0__ in case of success
      */
-    int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned char *ct, const parameters *params);
+    int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned char *ct Parameters);
 
 #ifdef __cplusplus
 }

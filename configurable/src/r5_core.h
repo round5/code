@@ -13,7 +13,7 @@
 
 #include <stddef.h>
 
-#include "parameters.h"
+#include "chooseparameters.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +42,7 @@ extern "C" {
      * @param[in]  params         the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int create_A(uint16_t **A_master, uint32_t *A_permutation, const unsigned char *sigma, const parameters *params);
+    int create_A(uint16_t **A_master, uint32_t *A_permutation, const unsigned char *sigma Parameters);
 
     /**
      * Creates random __S_idx__ from the given parameters.
@@ -54,7 +54,7 @@ extern "C" {
      * @param[in]  params  the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int create_S(uint16_t *S_idx, const unsigned char *sk, const parameters *params);
+    int create_S(uint16_t *S_idx, const unsigned char *sk Parameters);
 
     /**
      * Creates random __R_idx__ from the given parameters.
@@ -66,7 +66,7 @@ extern "C" {
      * @param[in]  params   the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int create_R(uint16_t *R_idx, const unsigned char *rho, const parameters *params);
+    int create_R(uint16_t *R_idx, const unsigned char *rho Parameters);
 
     /**
      * Decompress all coefficients in a matrix of polynomials from a bits to b bits.
@@ -105,7 +105,7 @@ extern "C" {
      * @param[in]  params        the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int compute_AS(uint16_t *B, const uint16_t *A_master, const uint32_t *A_permutation, const uint16_t *S_idx, const parameters *params);
+    int compute_AS(uint16_t *B, const uint16_t *A_master, const uint32_t *A_permutation, const uint16_t *S_idx Parameters);
 
     /**
      * Computes __U^T__ where __U__ is __A^T__*__R__ (so __U^T__ is
@@ -118,7 +118,7 @@ extern "C" {
      * @param[in]  params        the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int compute_RTA(uint16_t *U_T, const uint16_t *A_master, const uint32_t *A_permutation, const uint16_t *R_idx, const parameters *params);
+    int compute_RTA(uint16_t *U_T, const uint16_t *A_master, const uint32_t *A_permutation, const uint16_t *R_idx Parameters);
 
     /**
      * Computes mu values of __X__ with __X__ is __B^T__*__R__.
@@ -129,7 +129,7 @@ extern "C" {
      * @param[in]  params             the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int compute_BTR(uint16_t *X, uint16_t *B, const uint16_t *R_idx, const parameters *params);
+    int compute_BTR(uint16_t *X, uint16_t *B, const uint16_t *R_idx Parameters);
 
     /**
      * Computes mu values of __X'__ with ___X'__ is __S^T__*__U__.
@@ -140,7 +140,7 @@ extern "C" {
      * @param[in]  params             the algorithm parameters in use
      * @return __0__ in case of success
      */
-    int compute_STU(uint16_t *X_prime, uint16_t *U_T, const uint16_t *S_idx, const parameters *params);
+    int compute_STU(uint16_t *X_prime, uint16_t *U_T, const uint16_t *S_idx Parameters);
 
 #ifdef __cplusplus
 }

@@ -7,7 +7,7 @@
  * Implementation of the parameters, structure, and functions.
  */
 
-#include "parameters.h"
+#include "chooseparameters.h"
 #include "misc.h"
 
 #include <assert.h>
@@ -38,23 +38,23 @@ static int api_params_set_number = -1;
  ******************************************************************************/
 
 uint32_t get_crypto_secret_key_bytes(const parameters *params, const int is_cca_or_encrypt) {
-    return is_cca_or_encrypt ? ((uint32_t) params->kappa_bytes + (uint32_t) params->kappa_bytes + params->pk_size) : params->kappa_bytes;
+    return is_cca_or_encrypt ? ((uint32_t) PARAMS_KAPPA_BYTES + (uint32_t) PARAMS_KAPPA_BYTES + PARAMS_PK_SIZE) : PARAMS_KAPPA_BYTES;
 }
 
 uint32_t get_crypto_public_key_bytes(const parameters *params) {
-    return params->pk_size;
+    return PARAMS_PK_SIZE;
 }
 
 uint16_t get_crypto_bytes(const parameters *params, const int is_encrypt) {
-    return is_encrypt ? (uint16_t) (params->ct_size + params->kappa_bytes + 16) : params->kappa_bytes;
+    return is_encrypt ? (uint16_t) (PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES + 16) : PARAMS_KAPPA_BYTES;
 }
 
 uint16_t get_crypto_cipher_text_bytes(const parameters *params, const int is_cca, const int is_encrypt) {
-    return is_encrypt ? 0U : (uint16_t) (params->ct_size + (is_cca ? params->kappa_bytes : 0U));
+    return is_encrypt ? 0U : (uint16_t) (PARAMS_CT_SIZE + (is_cca ? PARAMS_KAPPA_BYTES : 0U));
 }
 
 uint16_t get_crypto_seed_bytes(const parameters *params) {
-    return params->kappa_bytes;
+    return PARAMS_KAPPA_BYTES;
 }
 
 parameters *set_parameters_from_api() {
@@ -141,57 +141,56 @@ parameters *set_parameters_from_api() {
     } else {
         return &api_params;
     }
-
 }
 
 int set_parameters(parameters *params, const uint8_t tau, const uint32_t tau2_len, const uint8_t kappa_bytes, const uint16_t d, const uint16_t n, const uint16_t h, const uint8_t q_bits, const uint8_t p_bits, const uint8_t t_bits, const uint8_t b_bits, const uint16_t n_bar, const uint16_t m_bar, const uint8_t f, const uint8_t xe) {
-    params->kappa_bytes = kappa_bytes;
-    params->d = d;
-    params->n = n;
-    params->h = h;
-    params->q_bits = q_bits;
-    params->p_bits = p_bits;
-    params->t_bits = t_bits;
-    params->b_bits = b_bits;
-    params->n_bar = n_bar;
-    params->m_bar = m_bar;
-    params->f = f;
-    params->xe = xe;
+    PARAMS_KAPPA_BYTES = kappa_bytes;
+    PARAMS_D = d;
+    PARAMS_N = n;
+    PARAMS_H = h;
+    PARAMS_Q_BITS = q_bits;
+    PARAMS_P_BITS = p_bits;
+    PARAMS_T_BITS = t_bits;
+    PARAMS_B_BITS = b_bits;
+    PARAMS_N_BAR = n_bar;
+    PARAMS_M_BAR = m_bar;
+    PARAMS_F = f;
+    PARAMS_XE = xe;
 
     /* Derived parameters */
-    params->kappa = (uint16_t) (8 * kappa_bytes);
-    params->k = (uint16_t) (n ? d / n : 0); /* Avoid arithmetic exception if n = 0 */
-    params->mu = (uint16_t) (b_bits ? CEIL_DIV((params->kappa + params->xe), b_bits) : 0); /* Avoid arithmetic exception if B = 0 */
-    params->q = (uint32_t) (1U << q_bits);
-    params->p = (uint16_t) (1U << p_bits);
+    PARAMS_KAPPA = (uint16_t) (8 * kappa_bytes);
+    PARAMS_K = (uint16_t) (n ? d / n : 0); /* Avoid arithmetic exception if n = 0 */
+    PARAMS_MU = (uint16_t) (b_bits ? CEIL_DIV((PARAMS_KAPPA + PARAMS_XE), b_bits) : 0); /* Avoid arithmetic exception if B = 0 */
+    PARAMS_Q = (uint32_t) (1U << q_bits);
+    PARAMS_P = (uint16_t) (1U << p_bits);
 
     /* Message sizes */
-    params->pk_size = (uint32_t) (kappa_bytes + BITS_TO_BYTES(d * n_bar * p_bits));
-    params->ct_size = (uint16_t) (BITS_TO_BYTES(d * m_bar * p_bits) + BITS_TO_BYTES(params->mu * t_bits));
+    PARAMS_PK_SIZE = (uint32_t) (kappa_bytes + BITS_TO_BYTES(d * n_bar * p_bits));
+    PARAMS_CT_SIZE = (uint16_t) (BITS_TO_BYTES(d * m_bar * p_bits) + BITS_TO_BYTES(PARAMS_MU * t_bits));
 
     /* Rounding constants */
-    params->z_bits = (uint16_t) (params->q_bits - params->p_bits + params->t_bits);
-    if (params->z_bits < params->p_bits) {
-        params->z_bits = params->p_bits;
+    params->z_bits = (uint16_t) (PARAMS_Q_BITS - PARAMS_P_BITS + PARAMS_T_BITS);
+    if (params->z_bits < PARAMS_P_BITS) {
+        params->z_bits = PARAMS_P_BITS;
     }
-    params->h1 = (uint16_t) ((uint16_t) 1 << (params->q_bits - params->p_bits - 1));
-    params->h2 = (uint16_t) (1 << (params->q_bits - params->z_bits - 1));
-    params->h3 = (uint16_t) ((uint16_t) (1 << (params->p_bits - params->t_bits - 1)) + (uint16_t) (1 << (params->p_bits - params->b_bits - 1)) - (uint16_t) (1 << (params->q_bits - params->z_bits - 1)));
+    PARAMS_H1 = (uint16_t) ((uint16_t) 1 << (PARAMS_Q_BITS - PARAMS_P_BITS - 1));
+    PARAMS_H2 = (uint16_t) (1 << (PARAMS_Q_BITS - params->z_bits - 1));
+    PARAMS_H3 = (uint16_t) ((uint16_t) (1 << (PARAMS_P_BITS - PARAMS_T_BITS - 1)) + (uint16_t) (1 << (PARAMS_P_BITS - PARAMS_B_BITS - 1)) - (uint16_t) (1 << (PARAMS_Q_BITS - params->z_bits - 1)));
 
     /* n must be either d or 1 and both must be > 0 */
-    assert(params->n != 0 && params->d != 0 && (params->n == params->d || params->n == 1));
+    assert(PARAMS_N != 0 && PARAMS_D != 0 && (PARAMS_N == PARAMS_D || PARAMS_N == 1));
     /* Hamming weight must be even, > 0, and < d */
-    assert(params->h != 0 && params->h <= params->d && !(params->h & 1));
+    assert(PARAMS_H != 0 && PARAMS_H <= PARAMS_D && !(PARAMS_H & 1));
     /* p, q, and t must be > 0 and power of 2 */
     /* p must be < q */
     /* t must be < p */
-    assert(params->q_bits > 0 && params->p_bits > 0 && params->t_bits > 0 && params->p_bits < params->q_bits && params->t_bits < params->p_bits);
+    assert(PARAMS_Q_BITS > 0 && PARAMS_P_BITS > 0 && PARAMS_T_BITS > 0 && PARAMS_P_BITS < PARAMS_Q_BITS && PARAMS_T_BITS < PARAMS_P_BITS);
     /* Dimensions must be > 0 */
-    assert(params->n_bar > 0 && params->m_bar > 0);
+    assert(PARAMS_N_BAR > 0 && PARAMS_M_BAR > 0);
     /* b must be > 0, < p */
-    assert(params->b_bits > 0 && params->b_bits < params->p_bits);
+    assert(PARAMS_B_BITS > 0 && PARAMS_B_BITS < PARAMS_P_BITS);
     /* Seed size must be > 0 */
-    assert(params->kappa_bytes > 0);
+    assert(PARAMS_KAPPA_BYTES > 0);
 
     /* tau */
     set_parameter_tau(params, tau);
@@ -203,19 +202,19 @@ int set_parameters(parameters *params, const uint8_t tau, const uint32_t tau2_le
 }
 
 void set_parameter_tau(parameters *params, const uint8_t tau) {
-    params->tau = params->k == 1 ? 0 : tau;
+    PARAMS_TAU = PARAMS_K == 1 ? 0 : tau;
 
     /* tau must be 0, 1, or 2 for non-ring, 0 for ring (but this is actually already enforced) */
-    assert(params->tau <= 2 && (params->k != 1 || params->tau == 0));
+    assert(PARAMS_TAU <= 2 && (PARAMS_K != 1 || PARAMS_TAU == 0));
 }
 
 void set_parameter_tau2_len(parameters *params, const uint32_t tau2_len) {
     if (tau2_len == 0) {
-        params->tau2_len = 1 << 11;
+        PARAMS_TAU2_LEN = 1 << 11;
     } else {
-        params->tau2_len = tau2_len;
+        PARAMS_TAU2_LEN = tau2_len;
     }
 
     /* For non-ring, tau2_len must be a power of two and larger than or equal to d */
-    assert(params->k == 1 || (params->tau2_len >= params->d && (params->tau2_len & (params->tau2_len - 1)) == 0));
+    assert(PARAMS_K == 1 || (PARAMS_TAU2_LEN >= PARAMS_D && (PARAMS_TAU2_LEN & (PARAMS_TAU2_LEN - 1)) == 0));
 }

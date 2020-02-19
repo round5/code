@@ -1,4 +1,4 @@
-################################################################################
+ ################################################################################
 #
 # Makefile for the Round5 implementations.
 #
@@ -15,11 +15,11 @@ implementation := $(notdir $(CURDIR))
 ################################################################################
 
 # The variant of the algorithm for the optimized implementation is set using the ALG
-# variable. Alternatively it can also be set by specifying KEM_PKE (either KEM
-# or PKE) and/or NIST_LEVEL (1, 3, or 5). The type of the algorithm (ND, T0, T1,
+# variable. Alternatively it can also be set by specifying CPA_CCA (either CPA
+# or CCA) and/or NIST_LEVEL (1, 3, or 5). The type of the algorithm (ND, T0, T1,
 # or T2) is derived from the implementation.
 #
-# The default is KEM, NIST level 1.
+# The default is CPA, NIST level 1.
 
 # Set default algorithm type (ring)
 ifneq (N1,$(ALG_TYPE))
@@ -31,17 +31,17 @@ ifeq (,$(NIST_LEVEL))
     NIST_LEVEL := 1
 endif
 
-# PKE or KEM
-ifeq (,$(KEM_PKE))
-    KEM_PKE := KEM
+# CCA or CPA
+ifeq (,$(CPA_CCA))
+    CPA_CCA := CPA
 endif
 
 # Set the algorithm (if none set)
 ifndef ALG
-    ALG := R5$(ALG_TYPE)_$(NIST_LEVEL)$(KEM_PKE)_0d
+    ALG := R5$(ALG_TYPE)_$(NIST_LEVEL)$(CPA_CCA)_0d
     ifdef XEF
         ifeq (ND,$(ALG_TYPE))
-            override ALG := R5$(ALG_TYPE)_$(NIST_LEVEL)$(KEM_PKE)_5d
+            override ALG := R5$(ALG_TYPE)_$(NIST_LEVEL)$(CPA_CCA)_5d
         endif
     endif
 endif
@@ -96,14 +96,15 @@ ifdef TAU2_LEN
     override CFLAGS += -DROUND5_API_TAU2_LEN=$(TAU2_LEN)
 endif
 
-# Disable OpenSSL's Shake?
-ifdef NO_OPENSSL_SHAKE
-    override CFLAGS += -DNO_OPENSSL_SHAKE
-endif
 
 # Use AES in CTR mode instead of cSHAKE for the generation of deterministic random numbers
 ifdef AES
     override CFLAGS += -DUSE_AES_DRBG
+endif
+
+# Use standalone library of FIPS202 SP800-185
+ifdef STANDALONE
+    override CFLAGS += -DSTANDALONE
 endif
 
 # Generating NIST KATs?
@@ -114,6 +115,16 @@ endif
 # Enable cache attack counter measures?
 ifdef CM_CACHE
     override CFLAGS += -DCM_CACHE
+endif
+
+# Enable constant-time countermeasures?
+ifdef CM_CT
+    override CFLAGS += -DCM_CT
+endif
+
+# Enable time measurement of KEMs
+ifdef TIMING
+    override CFLAGS += -DTIMING=$(TIMING)
 endif
 
 # Enable AVX2?
@@ -130,7 +141,12 @@ endif
 ifndef DEBUG
     override CFLAGS += -march=native -mtune=native -O3 -fomit-frame-pointer -fwrapv
 else
-    override CFLAGS += -g -DDEBUG
+    override CFLAGS += -g -DDEBUG -march=native -mtune=native -O3 -fomit-frame-pointer -fwrapv
+endif
+
+# Compute challenges
+ifdef CHALLENGE
+    override CFLAGS += -DCHALLENGE
 endif
 
 DEPFLAGS    = -MT $@ -MMD -MP -MF $(depdir)/$*.Td
@@ -140,6 +156,7 @@ POSTCOMPILE = mv -f $(depdir)/$*.Td $(depdir)/$*.d && touch $@
 LDFLAGS    +=
 
 LDLIBS     += -lcrypto -lkeccak -lm
+
 
 ################################################################################
 # Main Target Rules ############################################################
@@ -233,11 +250,11 @@ $(objdir)/%.o: $(srcdir)/%.c $(depdir)/%.d
 
 ifneq (optimized,$(implementation))
 # createAfixed for reference/configurable
-$(builddir)/createAfixed: $(objdir)/parameters.o $(objdir)/r5_parameter_sets.o $(rngobj) $(objdir)/drbg.o $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shake.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
+$(builddir)/createAfixed: $(objdir)/parameters.o $(objdir)/r5_parameter_sets.o $(rngobj)  $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shaking.o $(objdir)/keccakf1600.o $(objdir)/aesdrbg.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
 	$(CC) $(LDFLAGS) $^ $(LOADLIBS) $(LDLIBS) -o $@
 else ifeq (1,$(TAU))
 # createAfixed for optimized with tau=1
-$(builddir)/createAfixed: $(rngobj) $(objdir)/drbg.o $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shake.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
+$(builddir)/createAfixed: $(rngobj)  $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shaking.o $(objdir)/keccakf1600.o $(objdir)/aesdrbg.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
 	$(CC) $(LDFLAGS) $^ $(LOADLIBS) $(LDLIBS) -o $@
 endif
 

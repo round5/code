@@ -1,83 +1,30 @@
 /*
- * Copyright (c) 2019, PQShield and Koninklijke Philips N.V.
+ * Copyright (c) 2020, PQShield and Koninklijke Philips N.V.
  * Markku-Juhani O. Saarinen, Koninklijke Philips N.V.
  */
 
 // Fast matrix arithmetic (without cache attack countermeasures)
 
 #include "matmul.h"
-#include "misc.h"
 
-#include <string.h>
-
-#if PARAMS_K != 1 && !defined(CM_CACHE)
+#if PARAMS_K != 1 && !defined(CM_CACHE) && !defined(CM_CT)
 
 #include "drbg.h"
-#include "little_endian.h"
 
-// create a sparse ternary vector from a seed
-
-void create_secret_matrix_s_t(uint16_t s_t[PARAMS_N_BAR][PARAMS_H / 2][2], const uint8_t *seed) {
-    size_t i, l;
-    uint16_t x;
-    uint8_t v[PARAMS_D];
-
-    drbg_init(seed);
-
-    for (l = 0; l < PARAMS_N_BAR; l++) {
-        memset(v, 0, sizeof (v));
-
-        for (i = 0; i < PARAMS_H; i++) {
-            do {
-                do {
-                    drbg16(x);
-                } while (x >= PARAMS_RS_LIM);
-                x /= PARAMS_RS_DIV;
-            } while (v[x]);
-            v[x] = 1;
-            s_t[l][i >> 1][i & 1] = x; // addition / subtract index
-        }
-    }
-}
-
-// create a sparse ternary vector from a seed
-
-void create_secret_matrix_r_t(uint16_t r_t[PARAMS_M_BAR][PARAMS_H / 2][2], const uint8_t *seed) {
-    size_t i, l;
-    uint16_t x;
-    uint8_t v[PARAMS_D];
-
-    drbg_init(seed);
-
-    for (l = 0; l < PARAMS_M_BAR; l++) {
-        memset(v, 0, sizeof (v));
-
-        for (i = 0; i < PARAMS_H; i++) {
-            do {
-                do {
-                    drbg16(x);
-                } while (x >= PARAMS_RS_LIM);
-                x /= PARAMS_RS_DIV;
-            } while (v[x]);
-            v[x] = 1;
-            r_t[l][i >> 1][i & 1] = x; // addition / subtract index
-        }
-    }
-}
 
 // B = A * S
 
 #if PARAMS_TAU == 0
 
-void matmul_as_q(modq_t d[PARAMS_D][PARAMS_N_BAR], modq_t a[PARAMS_D][PARAMS_D], uint16_t s_t[PARAMS_N_BAR][PARAMS_H / 2][2]) {
+void matmul_as_q(modq_t d[PARAMS_D][PARAMS_N_BAR], modq_t a[PARAMS_D][PARAMS_D], tern_secret_s  s_t) {
 
 #elif PARAMS_TAU == 1
 
-void matmul_as_q(modq_t d[PARAMS_D][PARAMS_N_BAR], modq_t a[2 * PARAMS_D * PARAMS_D], uint32_t a_permutation[PARAMS_D], uint16_t s_t[PARAMS_N_BAR][PARAMS_H / 2][2]) {
+void matmul_as_q(modq_t d[PARAMS_D][PARAMS_N_BAR], modq_t a[2 * PARAMS_D * PARAMS_D], uint32_t a_permutation[PARAMS_D], tern_secret_s  s_t) {
 
 #else
 
-void matmul_as_q(modq_t d[PARAMS_D][PARAMS_N_BAR], modq_t a[PARAMS_TAU2_LEN + PARAMS_D], uint16_t a_permutation[PARAMS_D], uint16_t s_t[PARAMS_N_BAR][PARAMS_H / 2][2]) {
+void matmul_as_q(modq_t d[PARAMS_D][PARAMS_N_BAR], modq_t a[PARAMS_TAU2_LEN + PARAMS_D], uint16_t a_permutation[PARAMS_D], tern_secret_s s_t) {
 
 #endif
     size_t i, j, l;
@@ -136,15 +83,15 @@ void matmul_as_q(modq_t d[PARAMS_D][PARAMS_N_BAR], modq_t a[PARAMS_TAU2_LEN + PA
 
 #if PARAMS_TAU == 0
 
-void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t a[PARAMS_D][PARAMS_D], uint16_t r_t[PARAMS_M_BAR][PARAMS_H / 2][2]) {
+void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t a[PARAMS_D][PARAMS_D], tern_secret_r r_t) {
 
 #elif PARAMS_TAU == 1
 
-void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t a[2 * PARAMS_D * PARAMS_D], uint32_t a_permutation[PARAMS_D], uint16_t r_t[PARAMS_M_BAR][PARAMS_H / 2][2]) {
+void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t a[2 * PARAMS_D * PARAMS_D], uint32_t a_permutation[PARAMS_D], tern_secret_r r_t) {
 
 #else
 
-void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t a[PARAMS_TAU2_LEN + PARAMS_D], uint16_t a_permutation[PARAMS_D], uint16_t r_t[PARAMS_M_BAR][PARAMS_H / 2][2]) {
+void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t a[PARAMS_TAU2_LEN + PARAMS_D], uint16_t a_permutation[PARAMS_D], tern_secret_r r_t) {
 
 #endif
     size_t i, j, l;
@@ -174,7 +121,7 @@ void matmul_rta_q(modq_t d[PARAMS_M_BAR][PARAMS_D], modq_t a[PARAMS_TAU2_LEN + P
 
 // X' = S^T * U
 
-void matmul_stu_p(modp_t d[PARAMS_MU], modp_t u_t[PARAMS_M_BAR][PARAMS_D], uint16_t s_t[PARAMS_N_BAR][PARAMS_H / 2][2]) {
+void matmul_stu_p(modp_t d[PARAMS_MU], modp_t u_t[PARAMS_M_BAR][PARAMS_D], tern_secret_s s_t) {
     size_t k, i, j;
 
     // Initialize result
@@ -193,7 +140,7 @@ void matmul_stu_p(modp_t d[PARAMS_MU], modp_t u_t[PARAMS_M_BAR][PARAMS_D], uint1
 
 // X = B^T * R
 
-void matmul_btr_p(modp_t d[PARAMS_MU], modp_t b[PARAMS_D][PARAMS_N_BAR], uint16_t r_t[PARAMS_M_BAR][PARAMS_H / 2][2]) {
+void matmul_btr_p(modp_t d[PARAMS_MU], modp_t b[PARAMS_D][PARAMS_N_BAR], tern_secret_r r_t) {
     size_t i, j, l;
 
     // Initialize result

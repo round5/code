@@ -76,6 +76,7 @@ void print_sage_u_matrix(const char *var, const uint16_t *matrix, const size_t n
 
 void print_sage_u_vector_matrix(const char *var, const uint16_t *matrix, const size_t nr_rows, const size_t nr_columns, const size_t nr_elements) {
     size_t i, j;
+
     if (nr_elements == 1) {
         print_sage_u_matrix(var, matrix, nr_rows, nr_columns);
     } else if (nr_rows == 1 && nr_columns == 1) {

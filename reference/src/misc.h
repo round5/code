@@ -13,39 +13,20 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-/**
- * Macro to round a floating point value to an integer value.
- *
- * @param[in] x the value to round
- * @return _round(x)_
- */
-#define ROUND(x) ((int)(x + 0.5))
-
-/**
- * Macro to calculate _ceil(a/b)_.
- *
- * Note: only for _a_ and _b > 0_!
- *
- * @param[in] a, b the values of _a_ and _b_
- * @return _ceil(a/b)_
- */
-#define CEIL_DIV(a,b) ((a+b-1)/b)
-
-/**
- * Macro to converts a number of bits into a number of bytes.
- *
- * @param[in] b the number of bits to convert to number of bytes
- * @return _ceil(b/8)_
- */
-#define BITS_TO_BYTES(b) (CEIL_DIV(b,8))
-
 /** Macro for printing errors. */
 #ifdef DEBUG
 #include <stdio.h>
 #define DEBUG_ERROR(...) fprintf(stderr, __VA_ARGS__)
+#define DEBUG_PRINT(code) code
 #else
 #define DEBUG_ERROR(...) do {} while (0)
+#define DEBUG_PRINT(code)
 #endif
+
+// operations
+#define ROUND(x) ((int)(x + 0.5))
+#define CEIL_DIV(a,b) ((a+b-1)/b)
+#define BITS_TO_BYTES(b) (CEIL_DIV(b,8))
 
 #ifdef __cplusplus
 extern "C" {
