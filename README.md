@@ -16,9 +16,8 @@ where:
 * {version} is a letter to indicate the version of published parameters. Round5 parameters for the second round of NIST PQC are version "d". 
 
 Round5's IND-CPA KEM algorithm relies on `R5N{1,D}_{1,3,5}CPA_{0,5}{version}`parameter sets. 
-Round5's IND-CCA KEM and IND-CCA KEM algorithm require `R5N{1,D}_{1,3,5}CCA_{0,5}{version}`parameter sets. 
-The reason for defining both an IND-CPA and an IND-CCA KEM is because ephemeral handshakes can be made up to `40%`
- more efficient, in particular, bandwidth wise.
+Round5's IND-CCA KEM and IND-CCA KEM algorithms require `R5N{1,D}_{1,3,5}CCA_{0,5}{version}`parameter sets. 
+The reason for defining both an IND-CPA and an IND-CCA KEM is because ephemeral handshakes can be made up to `40%` more efficient, in particular, bandwidth wise.
  
 This code base includes three implementations. 
  
@@ -26,7 +25,8 @@ This code base includes three implementations.
  * The `optimized` code includes optimizations for speed and countermeasures against side-channel attacks. It also includes optimizations using AVX2 instructions.   
  * The `configurable` code provides good performance as well, but it is capable to execute at runtime any parameter set.
 
-The implementations include the code of [FIPS 202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf) and cSHAKE ([SP800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final)) so that Round5 KEM algorithms can run without external libraries.
+In Round5, TupleHash ([SP800-185](https://csrc.nist.gov/publications/detail/sp/800-185/final), [FIPS 202](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf)) is used to generate the pseudorandom data required to sample public parameters or secret keys as well as in the implementation of the different hash functions involved in Round5 ensuring domain separation.
+The code includes a standalone implementation of TupleHash so that Round5 KEM algorithms can run without external libraries.
 
 In addition to this implementation, Markku-Juhani O. Saarinen also maintains the [r5embed](https://github.com/r5embed/r5embed) implementation that is specially crafted for embedded platforms. 
 
@@ -56,7 +56,7 @@ following conditions must be met:
   export LIBRARY_PATH=${LIBRARY_PATH+$LIBRARY_PATH:}/usr/local/opt/openssl@1.1/lib
   ```
 
-* The Keccak library must be installed on your system.
+* The Keccak library must be installed on your system if you do not want to use the standalone implementation of TupleHash.
   This is done as follows:
 
   1. Linux: Install xsltproc (e.g.  `sudo apt-get install xsltproc`, on
@@ -152,11 +152,9 @@ The following make variables can be used to influence the build of the implement
 
     Note: this must be a power of two and larger than algorithm parameter `d`.
     
-* ***AES and STANDALONE:*** These variables define the way a random seed is expanded to generate A. The default approach is to use the SHA3 XOF functions instantiated by means of the `XKCP` library. Alternatively, the seed can be expanded by means of AES or a standalone library of FIPS202 / SP800-185.
+* ***AES:*** This variable defines the way a random seed is expanded to generate A. The default approach is to use TupleHash. If the "AES" flag is set, then the seed is expanded by means of AES in CTR mode.
 
-  - `AES`: If this flag is set, then the seed is expanded by means of AES in CTR mode.
-
-  - `STANDALONE`: If this flag is set, then the seed is expanded by means of FIPS202 / SP800-185 using the standalone library.
+* ***STANDALONE:*** If the `STANDALONE` flag is set, then TupleHash is implemented by means of standalone implementation included in this codebase. Otherwise, the TupleHash implementation available in the `XKCP` library is used.
 
 * ***CM\_CACHE and CM\_CT:*** Timing and cache attack countermeasures can be enabled by means of the
   `CM_CACHE` and `CM_CT` flags. These flags are only applicable to the optimized implementation.
@@ -166,10 +164,16 @@ The following make variables can be used to influence the build of the implement
   - The `CM_CT` flag delivers a fully constant time implementatiton.
   - To indicate that the 64-bit shift left operator with a variable amount can be considered constant-time on your platform, set `SHIFT_LEFT64_CONSTANT_TIME` to anything other than the empty string `SHIFT_LEFT64_CONSTANT_TIME=1`
 
-* ***AVX2:*** To allow the use of AVX2 optimisations, set `AVX2` to anything other than the
-  empty string (only applicable to the optimized implementation, requires an AVX2
-  compatible CPU/compiler).
-  For instance: `make AVX2=1`. Please note that this option implies `CM_CT`.
+* ***CM\_MALFORMED:*** Setting the `CM\_MALFORMED` flag enables checkTupleHashs in the optimized implementation that detect malformed parameters B and U. These malformed parameters might be caused by implementation errors or certain attacks. 
+
+* ***AVX2:*** To enable the use of AVX2 optimizations, set `AVX2` to anything other than the
+  empty string.
+  For instance: `make AVX2=1`.
+  This flag is only applicable to the optimized implementation and requires an AVX2 compatible CPU/compiler.
+  
+  Note 1: that this option implies `CM_CT`.
+  
+  Note 2: the generation of A can be done block-wise by using an AVX2 implementation of TupleHash. Do `make STANDALONE=1 AVX2=1`
    
 * ***KATs:*** To compile the code for generating NIST KATs, set `NIST_KAT_GENERATION` to
   anything other than the empty string. For instance:

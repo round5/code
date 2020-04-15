@@ -13,11 +13,13 @@
 
 #include <stdlib.h>
 
+#define NBLOCKS 8
+
 size_t A_fixed_len = 0;
 uint16_t *A_fixed = NULL;
 
 int create_A_fixed(const unsigned char *seed Parameters) {
-    A_fixed_len = (size_t) (PARAMS_D * PARAMS_K);
+    A_fixed_len = (size_t) (PARAMS_D * NBLOCKS *((PARAMS_K+NBLOCKS-1)/NBLOCKS));
 
     /* (Re)allocate space for A_fixed */
     A_fixed = checked_realloc(A_fixed, A_fixed_len * sizeof (*A_fixed));

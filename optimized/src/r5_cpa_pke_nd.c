@@ -5,6 +5,7 @@
 
 #include "r5_cpa_pke.h"
 #include "r5_parameter_sets.h"
+#include "checkPublicParameter.h"
 
 #if PARAMS_K == 1
 
@@ -52,7 +53,7 @@ int r5_cpa_pke_keygen(uint8_t *pk, uint8_t *sk) {
     create_A_random(A, pk);
 
     randombytes(sk, PARAMS_KAPPA_BYTES); // secret key -- Random S
-    create_secret_vector(S_idx, sk);
+    create_secret_vector_s(S_idx, sk);
     
     // B = A * S
     ringmul_q(B, A, S_idx);
@@ -88,6 +89,14 @@ int r5_cpa_pke_encrypt(uint8_t *ct, const uint8_t *pk, const uint8_t *m, const u
     // unpack public key
     unpack_p(B, pk + PARAMS_KAPPA_BYTES, PARAMS_N);
 
+#if CM_MALFORMED
+    int ret;
+    ret = checkPublicParameter(B, 1);
+    if (ret < 0){
+        return ret;
+    }
+#endif
+    
     // A from sigma
     create_A_random(A, pk);
     
@@ -98,7 +107,7 @@ int r5_cpa_pke_encrypt(uint8_t *ct, const uint8_t *pk, const uint8_t *m, const u
 #endif
 
     // Create R
-    create_secret_vector(R_idx, rho);
+    create_secret_vector_r(R_idx, rho);
 
     ringmul_q(U_T, A, R_idx); // U^T == U = A^T * R == A * R (mod q)
     ringmul_p(X, B, R_idx); // X = B^T * R == B * R (mod p)
@@ -167,10 +176,18 @@ int r5_cpa_pke_decrypt(uint8_t *m, const uint8_t *sk, const uint8_t *ct) {
     modp_t t, X_prime[PARAMS_MU];
     uint8_t m1[BITS_TO_BYTES(PARAMS_MU * PARAMS_B_BITS)] = {0};
 
-    create_secret_vector(S_idx, sk);
+    create_secret_vector_s(S_idx, sk);
 
     unpack_p(U_T, ct, PARAMS_N);// ct = U^T | v
 
+#if CM_MALFORMED
+    int ret;
+    ret = checkPublicParameter(U_T, 1);
+    if (ret < 0){
+        return ret;
+    }
+#endif
+    
     j = 8 * PARAMS_DP_SIZE;
     for (i = 0; i < PARAMS_MU; i++) {
         t = (modp_t) (ct[j >> 3] >> (j & 7)); // unpack t bits

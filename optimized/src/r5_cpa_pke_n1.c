@@ -26,12 +26,9 @@
 #endif
 #endif
 
-
 #if PARAMS_TAU != 0
 #include "little_endian.h"
 #include "drbg.h"
-//The DRBG customization when creating the tau=1 or tau=2 permutations.
-static const uint8_t permutation_customization[2] = {0, 1};
 #endif
 
 #if PARAMS_TAU == 1
@@ -42,11 +39,11 @@ static int create_A_permutation(uint32_t A_permutation[PARAMS_D], const unsigned
    
     uint16_t rnd;
     
-    drbg_init_customization(sigma, permutation_customization, sizeof (permutation_customization));
+    APermutationInit(sigma, 2*PARAMS_D);
     
     for (uint32_t i = 0; i < PARAMS_D; ++i) {
         do {
-            one_uint16_t_customization(rnd);
+            APermutationGen(&rnd, 1);
         } while (rnd >= PARAMS_RS_LIM);
         rnd = (uint16_t) (rnd / PARAMS_RS_DIV);
         A_permutation[i] = 2 * i * PARAMS_D + rnd;
@@ -63,11 +60,11 @@ static int create_A_permutation(uint16_t A_permutation[PARAMS_D], const unsigned
     uint32_t i;
     uint8_t v[PARAMS_TAU2_LEN] = {0};
 
-    drbg_init_customization(sigma, permutation_customization, sizeof (permutation_customization));
-
+    APermutationInit(sigma, 2*PARAMS_D);
+    
     for (i = 0; i < PARAMS_D; ++i) {
         do {
-            one_uint16_t_customization(rnd);
+            APermutationGen(&rnd, 1);
             rnd = (uint16_t) (rnd & (PARAMS_TAU2_LEN - 1));
         } while (v[rnd]);
         v[rnd] = 1;
@@ -85,10 +82,10 @@ int r5_cpa_pke_keygen(uint8_t *pk, uint8_t *sk) {
     modq_t B[PARAMS_D][PARAMS_N_BAR];
     tern_secret_s S_T;
     
-    
     randombytes(pk, PARAMS_KAPPA_BYTES); // sigma = seed of (permutation of) A
 #if PARAMS_TAU == 0
-    modq_t A_random[PARAMS_D][PARAMS_D];
+    #define NBLOCKS 8
+    modq_t A_random[NBLOCKS*((PARAMS_K+NBLOCKS-1)/NBLOCKS)][PARAMS_D];
     create_A_random((modq_t *) A_random, pk);
     #define A_matrix A_random
 #elif PARAMS_TAU == 1
@@ -153,10 +150,20 @@ int r5_cpa_pke_encrypt(uint8_t *ct, const uint8_t *pk, const uint8_t *m, const u
     modp_t t, tm;
 
     unpack_p(&B[0][0], pk + PARAMS_KAPPA_BYTES, PARAMS_D*PARAMS_N_BAR);
-
+    
+#if CM_MALFORMED
+    int ret;
+    ret = checkPublicParameter(B, PARAMS_N_BAR);
+    if (ret < 0){
+        return ret;
+    }
+#endif
+    
     #undef A_matrix
 #if PARAMS_TAU == 0
-    modq_t A_random[PARAMS_D][PARAMS_K];
+    //modq_t A_random[PARAMS_D][PARAMS_K];
+    #define NBLOCKS 8
+    modq_t A_random[NBLOCKS*((PARAMS_K+NBLOCKS-1)/NBLOCKS)][PARAMS_D];
     create_A_random((modq_t *) A_random, pk);
     #define A_matrix A_random
 #elif PARAMS_TAU == 1
@@ -231,10 +238,6 @@ int r5_cpa_pke_encrypt(uint8_t *ct, const uint8_t *pk, const uint8_t *m, const u
             }
         }
         
-        //print_sage_u_vector_matrix("r5_cpa_pke_encrypt: A", &DEBUG_OUT_A[0][0], PARAMS_K, PARAMS_K, PARAMS_N);
-                
-        //print_sage_u_vector_matrix("r5_cpa_pke_encrypt: B", &B[0][0], PARAMS_K, PARAMS_N_BAR, PARAMS_N);
-        
         uint16_t debug_u[PARAMS_D][PARAMS_M_BAR];
         for (i = 0; i < PARAMS_D; ++i) {
             for (j = 0; j < PARAMS_M_BAR; ++j) {
@@ -268,7 +271,15 @@ int r5_cpa_pke_decrypt(uint8_t *m, const uint8_t *sk, const uint8_t *ct) {
     create_secret_matrix_s_t(S_T, sk);
 
     unpack_p((modp_t *) U_T, ct, PARAMS_D*PARAMS_M_BAR);
-
+    
+#if CM_MALFORMED
+    int ret;
+    ret = checkPublicParameter(U_T, PARAMS_M_BAR);
+    if (ret < 0){
+        return ret;
+    }
+#endif
+    
     j = 8 * PARAMS_DPU_SIZE;
     for (i = 0; i < PARAMS_MU; i++) {
         t = (modp_t) (ct[j >> 3] >> (j & 7)); // unpack t bits

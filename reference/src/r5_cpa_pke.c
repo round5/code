@@ -22,6 +22,8 @@
 #include "r5_hash.h"
 #include "xef.h"
 
+#define NBLOCKS 8
+
 /*******************************************************************************
  * Private functions
  ******************************************************************************/
@@ -102,7 +104,11 @@ int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk Parameters) {
     size_t len_b;
 
     /* Calculate sizes */
-    len_a = (size_t) (PARAMS_K * PARAMS_K * PARAMS_N);
+    if (PARAMS_K == 1) {
+        len_a = (size_t) (PARAMS_K * PARAMS_K * NBLOCKS *((PARAMS_N+NBLOCKS-1)/NBLOCKS));
+    } else {
+        len_a = (size_t) (PARAMS_K * NBLOCKS * ((PARAMS_K + NBLOCKS - 1)/NBLOCKS) * PARAMS_N);
+    }
     len_s = (size_t) (PARAMS_K * PARAMS_N_BAR * PARAMS_N);
     len_b = (size_t) (PARAMS_K * PARAMS_N_BAR * PARAMS_N);
 
@@ -181,7 +187,11 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     size_t len_x;
     size_t len_m1;
 
-    len_a = (size_t) (PARAMS_K * PARAMS_K * PARAMS_N);
+    if (PARAMS_K == 1) {
+        len_a = (size_t) (PARAMS_K * PARAMS_K * NBLOCKS *((PARAMS_N+NBLOCKS-1)/NBLOCKS));
+    } else {
+        len_a = (size_t) (PARAMS_K * NBLOCKS * ((PARAMS_K + NBLOCKS-1)/NBLOCKS) * PARAMS_N);
+    }
     len_r = (size_t) (PARAMS_K * PARAMS_M_BAR * PARAMS_N);
     len_u = (size_t) (PARAMS_K * PARAMS_M_BAR * PARAMS_N);
     len_b = (size_t) (PARAMS_K * PARAMS_N_BAR * PARAMS_N);

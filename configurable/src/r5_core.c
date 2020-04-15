@@ -39,37 +39,29 @@
  * @return __0__ in case of success
  */
 
-static int create_secret_vectors_idx(uint16_t *vectors_idx, const unsigned char *seed, const unsigned nr_vectors Parameters) {
-	unsigned i, j;
+static int create_secret_vectors_idx(uint16_t *vectors_idx, const unsigned char *seed, const unsigned nr_vectors, const uint8_t *domain Parameters) {
+	uint8_t j;
+    uint16_t i;
 	uint16_t idx;
 	unsigned char *occupied = checked_malloc(PARAMS_D);
-
-	size_t l;
-
-	unsigned char *jArray = checked_malloc( sizeof(size_t) );
-	memset(jArray, 0, sizeof(size_t));
-
-	// custom_len = ceil((PARAMS_N_BAR - 1)/256)
-	size_t custom_len = 0;
-	if (nr_vectors > 1){custom_len = sizeof(size_t);}
 
 	size_t pos_idx = 0;
 	size_t neg_idx = PARAMS_H / 2;
 
-	DRBG_SAMPLER16_INIT(PARAMS_D);
+    const uint32_t DRBG_SAMPLER16_range_divisor = (uint32_t) (0x10000 / PARAMS_D);
+    const uint32_t DRBG_SAMPLER16_range_limit = PARAMS_D * DRBG_SAMPLER16_range_divisor;
 
 	for (j = 0; j < nr_vectors; ++j) {
-		memset(jArray, 0, sizeof(size_t));
-		for (l = 0; l < sizeof(size_t); l++) { 
-			jArray[l] = (j >> (8*l)) & (0xFF);
-		}
-
-		drbg_init_customization(seed, jArray, custom_len);
+        SKGenerationInit(domain, seed, (const uint8_t *)&j);
 		memset(occupied, 0, PARAMS_D);
 
 		for (i = 0; i < PARAMS_H; ++i) {
 			do {
-				DRBG_SAMPLER16(idx);
+                do {
+                    SKGenerationGen(&idx, 1);
+                } while (idx >= DRBG_SAMPLER16_range_limit);
+                idx = (uint16_t) (idx / DRBG_SAMPLER16_range_divisor);
+                
 			} while (occupied[idx] != 0);
 			occupied[idx] = 1;
 			if (i & 1) {
@@ -83,7 +75,7 @@ static int create_secret_vectors_idx(uint16_t *vectors_idx, const unsigned char 
 	}
 
 	free(occupied);
-	free(jArray);
+
 	return 0;
 }
  
@@ -327,10 +319,7 @@ static int permutation_tau_0_non_ring(uint32_t *row_disp Parameters) {
     return 0;
 }
 
-/**
- * The DRBG customization when creating the tau=1 or tau=2 permutations.
- */
-static const uint8_t permutation_customization[2] = {0, 1};
+
 
 /**
  * Generates the row displacements for the A matrix creation variant tau=1.
@@ -343,12 +332,19 @@ static const uint8_t permutation_customization[2] = {0, 1};
 static int permutation_tau_1(uint32_t *row_disp, const unsigned char *seed Parameters) {
     uint32_t i;
     uint16_t rnd;
-    DRBG_SAMPLER16_INIT(PARAMS_D);
+    
+    const uint32_t DRBG_SAMPLER16_range_divisor = (uint32_t) (0x10000 / PARAMS_D);
+    const uint32_t DRBG_SAMPLER16_range_limit = PARAMS_D * DRBG_SAMPLER16_range_divisor;
 
-    drbg_init_customization(seed, permutation_customization, sizeof (permutation_customization));
+    APermutationInit(seed, 2*PARAMS_K);
+    
+    for (i = 0; i < PARAMS_K; ++i) {
+        
+        do {
+            APermutationGen(&rnd, 1);
+        } while (rnd >= DRBG_SAMPLER16_range_limit);
+        rnd = (uint16_t) (rnd / DRBG_SAMPLER16_range_divisor);
 
-    for (i = 0; i < PARAMS_D; ++i) {
-        DRBG_SAMPLER16(rnd);
         row_disp[i] = 2 * i * PARAMS_D + rnd;
     }
 
@@ -368,13 +364,11 @@ static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed Param
     uint16_t rnd;
     uint8_t *v = checked_calloc(PARAMS_TAU2_LEN, 1);
 
-    drbg_init_customization(seed, permutation_customization, sizeof (permutation_customization));
-
+    APermutationInit(seed, 2*PARAMS_K);
+    
     for (i = 0; i < PARAMS_K; ++i) {
         do {
-//            rnd = (uint16_t) (drbg_sampler16_2(PARAMS_TAU2_LEN) & (PARAMS_TAU2_LEN - 1));
-//            niet gelijk aan:
-             drbg_sampler16_2(rnd);
+             APermutationGen(&rnd, 1);
              rnd = (uint16_t) (rnd & (PARAMS_TAU2_LEN - 1 ));
         } while (v[rnd]);
         v[rnd] = 1;
@@ -394,13 +388,16 @@ static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed Param
  * @param[in]   params    the algorithm parameters in use
  * @return __0__ on success
  */
+
+#define NBLOCKS 8
+
 static int create_A_master(uint16_t **A_master, const unsigned char *sigma Parameters) {
     size_t i;
 
     switch (PARAMS_TAU) {
         case 0:
             if (PARAMS_K == 1) {
-                *A_master = checked_malloc((2 * (size_t) (PARAMS_D + 1) * sizeof (**A_master)));
+                *A_master = checked_malloc((2 * (size_t) NBLOCKS *((PARAMS_D + 1 + NBLOCKS - 1)/NBLOCKS) * sizeof (**A_master)));
                 create_A_random(*A_master, sigma Params);
                 uint16_t *aux = checked_malloc((size_t) (PARAMS_D + 1) * sizeof (*aux));
                 lift_poly(aux, (int16_t *) * A_master, PARAMS_D);
@@ -411,12 +408,12 @@ static int create_A_master(uint16_t **A_master, const unsigned char *sigma Param
                 memcpy((*A_master) + (PARAMS_D + 1), *A_master, (size_t) (PARAMS_D + 1) * sizeof (**A_master));
                 free(aux);
             } else {
-                *A_master = checked_malloc((size_t) (PARAMS_K * PARAMS_D) * sizeof (**A_master));
+                *A_master = checked_malloc((size_t) (NBLOCKS * ((PARAMS_K + NBLOCKS - 1)/NBLOCKS)* PARAMS_D) * sizeof (**A_master));
                 create_A_random(*A_master, sigma Params);
             }
             break;
         case 1:
-            assert(A_fixed != NULL && A_fixed_len == (size_t) (2 * PARAMS_D * PARAMS_K));
+            assert(A_fixed != NULL && A_fixed_len == (size_t) (2 * PARAMS_D * NBLOCKS *((PARAMS_K+NBLOCKS -1 )/NBLOCKS)));
             *A_master = A_fixed;
             break;
         case 2:
@@ -460,11 +457,13 @@ int create_A(uint16_t **A_master, uint32_t *A_permutation, const unsigned char *
 }
 
 int create_S(uint16_t *S_idx, const unsigned char *sk Parameters) {
-    return create_secret_vectors_idx(S_idx, sk, PARAMS_N_BAR Params);
+    const uint8_t domain[4] = "SGEN";
+    return create_secret_vectors_idx(S_idx, sk, PARAMS_N_BAR, domain Params);
 }
 
 int create_R(uint16_t *R_idx, const unsigned char *rho Parameters) {
-    return create_secret_vectors_idx(R_idx, rho, PARAMS_M_BAR Params);
+    const uint8_t domain[4] = "RGEN";
+    return create_secret_vectors_idx(R_idx, rho, PARAMS_M_BAR, domain Params);
 }
 
 int compute_AS(uint16_t *B, const uint16_t *A_master, const uint32_t *A_permutation, const uint16_t *S_idx Parameters) {

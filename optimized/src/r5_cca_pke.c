@@ -29,15 +29,18 @@ int r5_cca_pke_keygen(unsigned char *pk, unsigned char *sk) {
 }
 
 int r5_cca_pke_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsigned char *m, const unsigned long long m_len, const unsigned char *pk) {
-    int result = -1;
+    int ret = 0;
     const unsigned long long c1_len = PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES;
     unsigned char c1[PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES];
     unsigned long long c2_len;
     unsigned char k[PARAMS_KAPPA_BYTES];
 
     /* Determine c1 and k */
-    r5_cca_kem_encapsulate(c1, k, pk);
-
+    ret = r5_cca_kem_encapsulate(c1, k, pk);
+    if (ret < 0){
+        return ret;
+    }
+    
     /* Copy c1 into first part of ct */
     memcpy(ct, c1, c1_len);
     *ct_len = c1_len;
@@ -45,20 +48,16 @@ int r5_cca_pke_encrypt(unsigned char *ct, unsigned long long *ct_len, const unsi
     /* Apply DEM to get second part of ct */
     if (round5_dem(ct + c1_len, &c2_len, k, m, m_len)) {
         DEBUG_ERROR("Failed to apply DEM\n");
-        goto done_encrypt;
+        return -1;
     }
+    
     *ct_len += c2_len;
 
-    /* All OK */
-    result = 0;
-
-done_encrypt:
-
-    return result;
+    return ret;
 }
 
 int r5_cca_pke_decrypt(unsigned char *m, unsigned long long *m_len, const unsigned char *ct, unsigned long long ct_len, const unsigned char *sk) {
-    int result = -1;
+    int ret = 0;
     unsigned char k[PARAMS_KAPPA_BYTES];
     const unsigned char * const c1 = ct;
     const unsigned long long c1_len = PARAMS_CT_SIZE + PARAMS_KAPPA_BYTES;
@@ -68,22 +67,20 @@ int r5_cca_pke_decrypt(unsigned char *m, unsigned long long *m_len, const unsign
     /* Check length, should be at least c1_len + 16 (for the DEM tag) */
     if (ct_len < (c1_len + 16U)) {
         DEBUG_ERROR("Invalid ciphertext message: %llu < %llu\n", ct_len, c1_len + 16U);
-        goto done_decrypt;
+        return -1;
     }
 
     /* Determine k */
-    r5_cca_kem_decapsulate(k, c1, sk);
-
+    ret = r5_cca_kem_decapsulate(k, c1, sk);
+    if (ret < 0){
+        return ret;
+    }
+    
     /* Apply DEM-inverse to get m */
     if (round5_dem_inverse(m, m_len, k, c2, c2_len)) {
         DEBUG_ERROR("Failed to apply DEM-inverse\n");
-        goto done_decrypt;
+        return -1;
     }
 
-    /* OK */
-    result = 0;
-
-done_decrypt:
-
-    return result;
+    return ret;
 }

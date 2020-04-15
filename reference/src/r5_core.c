@@ -38,36 +38,38 @@ static uint16_t modulo(const int32_t a, const uint32_t b) {
     return (uint16_t) ((uint32_t) a & (b - 1));
 }
 
+
 /**
  * Create a sparse ternary vector of length len.
- * Important: the drbg must have been initialised before calling this function!
  *
- * @param[out] vector    the generated vector
- * @param[in]  len       the length of the ternary vector to create
- * @param[in]  h         the hamming weight (i.e. number of non-zero elements)
- * @param[in]  context   the context of drbg
+ * @param[out] vectors      the generated vectors
+ * @param[in]  seed         the seed
+ * @param[in]  domain       the domain for the generation of the pseudorandom data
+ * @param[in]  nr_vectors   the number of vectors to generate
  * @return __0__ in case of success
  */
+static int secret_key_vector(int16_t *vector, const uint8_t *domain, const unsigned char *seed, uint8_t vector_id Parameters) {
+    
+    const uint32_t DRBG_SAMPLER16_range_divisor = (uint32_t) (0x10000 / PARAMS_D);
+    const uint32_t DRBG_SAMPLER16_range_limit = PARAMS_D * DRBG_SAMPLER16_range_divisor;
+    
+    uint16_t i, idx;
 
-//static int create_secret_vector(int16_t *vector, const uint16_t len, const uint16_t h, CContext context Parameters) {
-static int create_secret_vector(int16_t *vector, const uint16_t len, const uint16_t h, drbg_ctx context Parameters) {
-
-    const uint32_t range_divisor = (uint32_t) (0x10000 / len); 
-    const uint32_t range_limit = len * range_divisor;
-
-    size_t i;
-    uint16_t idx;
-    memset(vector, 0, sizeof (*vector) * len);
-
-    for (i = 0; i < h; ++i) {
-        do {   
-		do { 
-			drbg_sampler16_2_reference(context, idx); 
-		    } while (idx >= range_limit);
-		idx =  (uint16_t) (idx / range_divisor);
+    SKGenerationInit(domain, seed, &vector_id);
+    
+    memset(vector, 0, 2*PARAMS_D);
+    for (i = 0; i < PARAMS_H; ++i) {
+        do {
+            do {
+                SKGenerationGen(&idx, 1);
+            } while (idx >= DRBG_SAMPLER16_range_limit);
+            idx = (uint16_t) (idx / DRBG_SAMPLER16_range_divisor);
+            
         } while (vector[idx] != 0);
+        
         vector[idx] = (i & 1) ? -1 : 1;
     }
+    
     return 0;
 }
 
@@ -248,11 +250,6 @@ static int decompress_element(uint16_t *x, const uint16_t a_bits, const uint16_t
 }
 
 /**
- * The DRBG customization when creating the tau=1 or tau=2 permutations.
- */
-static const uint8_t permutation_customization[2] = {0, 1};
-
-/**
  * Generates the permutation for the A matrix creation variant tau=1.
  *
  * @param[out] row_disp  the row displacements
@@ -267,12 +264,10 @@ static int permutation_tau_1(uint32_t *row_disp, const unsigned char *seed Param
     const uint32_t range_divisor = (uint32_t) (0x10000 / PARAMS_D); 
     const uint32_t range_limit = PARAMS_D * range_divisor;
 
-    /* Preferred a local context for the DRBG */
-
-    drbg_init_customization(seed, permutation_customization, sizeof (permutation_customization)); 
-
+    APermutationInit(seed, 2*PARAMS_K);
+    
     for (i = 0; i < PARAMS_D; ++i) {
-		do { drbg_sampler16_2(rnd); 
+        do { APermutationGen(&rnd, 1);
 		} while (rnd >= range_limit);
 		rnd =  (uint16_t) (rnd / range_divisor);
         row_disp[i] = i * PARAMS_D + rnd;
@@ -293,14 +288,12 @@ static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed Param
     uint16_t rnd;
     uint8_t *v = checked_calloc(PARAMS_TAU2_LEN, 1);
 
-    drbg_init_customization(seed, permutation_customization, sizeof (permutation_customization)); 
-
+    APermutationInit(seed, 2*PARAMS_K);
+    
     for (i = 0; i < PARAMS_K; ++i) {
         do {
-        // rnd = drbg_sampler16_2(PARAMS_TAU2_LEN); // what is the argument doing here?
-        // void argument in defining declaration
-             drbg_sampler16_2(rnd);
-             rnd = (uint16_t) (rnd & (PARAMS_TAU2_LEN - 1 ));
+            APermutationGen(&rnd, 1);
+            rnd = (uint16_t) (rnd & (PARAMS_TAU2_LEN - 1 ));
 	} while (v[rnd]);
         v[rnd] = 1;
         row_disp[i] = rnd;
@@ -313,6 +306,8 @@ static int permutation_tau_2(uint32_t *row_disp, const unsigned char *seed Param
 /*******************************************************************************
  * Public functions
  ******************************************************************************/
+
+#define NBLOCKS 8
 
 int create_A(uint16_t *A, const unsigned char *sigma Parameters) {
     uint32_t i;
@@ -327,7 +322,7 @@ int create_A(uint16_t *A, const unsigned char *sigma Parameters) {
             create_A_random(A, sigma Params);
             break;
         case 1:
-            assert(A_fixed != NULL && A_fixed_len == (size_t) (PARAMS_D * PARAMS_K));
+            assert(A_fixed != NULL && A_fixed_len == (size_t) (PARAMS_D * NBLOCKS *((PARAMS_K+NBLOCKS-1)/NBLOCKS)));
             A_master = A_fixed;
             break;
         case 2:
@@ -372,52 +367,27 @@ int create_A(uint16_t *A, const unsigned char *sigma Parameters) {
     return 0;
 }
 
- int create_S_T(int16_t *S_T, const unsigned char *sk Parameters) {
-	size_t i, j;
-	const uint16_t len = (uint16_t) (PARAMS_K * PARAMS_N);
-	 
-	uint8_t iArray[sizeof(size_t)];
-	 
-	// custom_len = ceil((PARAMS_N_BAR - 1)/256)
-	size_t custom_len = 0;
-	if ( PARAMS_N_BAR > 1 ) { 
-		custom_len = sizeof(size_t); 
-	}
-	     
-	// Create rows of sparse vectors
-	for (i = 0; i < PARAMS_N_BAR; ++i) {
-		for (j = 0; j < sizeof(size_t); j++) { 
-			iArray[j] = (i>>(8*j)) & (0xFF); 
-		}
-		drbg_init_customization(sk, iArray, custom_len); 
-		create_secret_vector(&S_T[i * len], len, PARAMS_H, &context Params);
-	}
-	return 0;
+int create_S_T(int16_t *S_T, const unsigned char *sk Parameters) {
+
+    uint8_t vector_id;
+    const uint8_t domain[4] = "SGEN";
+
+    for (vector_id = 0; vector_id < PARAMS_N_BAR; ++vector_id) {
+        secret_key_vector(&S_T[vector_id*PARAMS_D], domain, sk, vector_id Params);
+    }
+    return 0;
 }
 
 int create_R_T(int16_t *R_T, const unsigned char *rho Parameters) {
-	size_t i, j;
-	const uint16_t len = (uint16_t) (PARAMS_K * PARAMS_N);
 
-	uint8_t iArray[sizeof(size_t)];
+    uint8_t vector_id;
+    const uint8_t domain[4] = "RGEN";
 
-	// custom_len = ceil((PARAMS_M_BAR - 1)/256)
-	size_t custom_len = 0;
-	if (PARAMS_M_BAR > 1) {
-		custom_len = sizeof(size_t);
-	}
-
-	for (i = 0; i < PARAMS_M_BAR; ++i) {
-		for (j = 0; j < sizeof(size_t); j++) {
-			iArray[j] = (i>>(8*j)) & (0xFF);
-
-		}
-		drbg_init_customization(rho, iArray, custom_len);
-		create_secret_vector(&R_T[i * len], len, PARAMS_H, &context Params);
-	}
-	return 0;
+    for (vector_id = 0; vector_id < PARAMS_M_BAR; ++vector_id) {
+        secret_key_vector(&R_T[vector_id*PARAMS_D], domain, rho, vector_id Params);
+    }
+    return 0;
 }
-
 
 int mult_matrix(uint16_t *result, const int16_t *left, const size_t l_rows, const size_t l_cols, const int16_t *right, const size_t r_rows, const size_t r_cols, const size_t els, const uint32_t mod, const int isXi) {
     assert(l_cols == r_rows);
@@ -425,8 +395,6 @@ int mult_matrix(uint16_t *result, const int16_t *left, const size_t l_rows, cons
     size_t i, j, k;
     uint16_t *temp_poly = checked_malloc(els * sizeof (*temp_poly));
 
-    /* Initialize result to zero */
-    /* Note: this might not be constant-time */
     memset(result, 0, (size_t) (l_rows * r_cols * els * sizeof (*result)));
 
     for (i = 0; i < l_rows; ++i) {

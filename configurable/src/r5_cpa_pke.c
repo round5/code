@@ -150,7 +150,7 @@ int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *pa
     /* Calculate sizes */
     len_s_idx = (size_t) (params->h * params->n_bar);
     len_b = (size_t) (params->k * params->n_bar * params->n);
-
+    
     /* Allocate space */
     sigma = checked_malloc(params->kappa_bytes);
     A_permutation = checked_malloc((size_t) (params->d + 1) * sizeof (*A_permutation));
@@ -159,7 +159,7 @@ int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *pa
 
     /* Generate seed sigma */
     randombytes(sigma, params->kappa_bytes);
-
+    
     /* Create A from sigma */
     create_A(&A, A_permutation, sigma, params);
 

@@ -1,4 +1,11 @@
- ################################################################################
+# Consideratons
+#   [1] https://www.gnu.org/software/make/manual/html_node/Automatic-Prerequisites.html
+#   [2] https://www.gnu.org/software/make/manual/html_node/Substitution-Refs.html#Substitution-Refs
+
+#   Tips: http://yszheda.github.io/wiki/makefile.html
+
+
+################################################################################
 #
 # Makefile for the Round5 implementations.
 #
@@ -50,7 +57,15 @@ endif
 # Dir/File Setup ###############################################################
 ################################################################################
 
-srcdir    = src
+srcdir              = src
+srcdir_rng          = $(srcdir)/common/rng
+srcdir_drbg         = $(srcdir)/common/drbg
+srcdir_fips202      = $(srcdir)/common/fips202
+srcdir_fips2021     = $(srcdir)/common/fips202/1x
+srcdir_fips2024     = $(srcdir)/common/fips202/4x
+srcdir_aesctr       = $(srcdir)/common/aesctr
+srcdir_hash         = $(srcdir)/common/hash
+
 builddir  = build
 objdir    = $(builddir)/.o
 depdir    = $(builddir)/.d
@@ -58,17 +73,51 @@ docdir    = doc
 
 # RNG depends on KAT-generation setting
 ifdef NIST_KAT_GENERATION
-    rngsrc = $(srcdir)/rng/nist_rng.c
+    rngsrc = $(srcdir_rng)/nist_rng.c
 else
-    rngsrc = $(srcdir)/rng/true_rng.c
+    rngsrc = $(srcdir_rng)/true_rng.c
 endif
+
+## [2]
 rngobj   := $(rngsrc:$(srcdir)/%.c=$(objdir)/%.o)
 
-srcs     := $(wildcard $(srcdir)/*.c) $(rngsrc) $(wildcard $(srcdir)/examples/*.c)
+hashsrc = $(wildcard $(srcdir_hash)/*.c)
+
+fips202src = $(wildcard $(srcdir_fips202)/*.c)
+
+#ifdef STANDALONE
+fips2021src = $(wildcard $(srcdir_fips2021)/*.c)
+#endif
+
+ifdef STANDALONE
+ifdef AVX2
+fips2024src = $(wildcard $(srcdir_fips2024)/*.c)
+endif
+endif
+
+ifdef AES
+aesctrsrc = $(wildcard $(srcdir_aesctr)/*.c)
+endif
+
+
+hashobj := $(hashsrc:$(srcdir)/%.c=$(objdir)/%.o)
+fips202obj := $(fips202src:$(srcdir)/%.c=$(objdir)/%.o)
+fips2021obj := $(fips2021src:$(srcdir)/%.c=$(objdir)/%.o)
+fips2024obj := $(fips2024src:$(srcdir)/%.c=$(objdir)/%.o)
+aesctrobj := $(aesctrsrc:$(srcdir)/%.c=$(objdir)/%.o)
+
+srcs     := $(wildcard $(srcdir)/*.c)
+srcs     := $(srcs) $(wildcard $(srcdir)/examples/*.c)
+srcs     := $(srcs) $(hashsrc)
+srcs     := $(srcs) $(rngsrc)
+srcs     := $(srcs) $(fips202src)
+srcs     := $(srcs) $(fips2021src)
+srcs     := $(srcs) $(fips2024src)
+srcs     := $(srcs) $(aesctrsrc)
+
 objs     := $(srcs:$(srcdir)/%.c=$(objdir)/%.o)
 
 examples := $(patsubst $(srcdir)/examples/%.c, $(builddir)/%, $(wildcard $(srcdir)/examples/*.c))
-
 
 ################################################################################
 # Compiler Setup ###############################################################
@@ -81,10 +130,46 @@ AFLFUZZER_CC = afl-gcc
 LIBFUZZER_CC = clang
 
 # Compiler flags, allow to set *additional* parameters at the command-line
-override CFLAGS += -I $(srcdir) -std=c99 -pedantic -Wall -Wextra -Wconversion -Wcast-qual -Wcast-align
+override CFLAGS += -std=c99 -pedantic -Wall -Wextra -Wconversion -Wcast-qual -Wcast-align
+
+#Include subdirectories
+override CFLAGS += -I $(srcdir)
+override CFLAGS += -I $(srcdir_rng)
+override CFLAGS += -I $(srcdir_drbg)
+override CFLAGS += -I $(srcdir_fips202)
+override CFLAGS += -I $(srcdir_fips2021)
+override CFLAGS += -I $(srcdir_fips2024)
+override CFLAGS += -I $(srcdir_aesctr)
+override CFLAGS += -I $(srcdir_hash)
 
 # Define version to build
 override CFLAGS += -D$(ALG)
+
+DEPFLAGS    = -MT $@ -MMD -MP -MF $(depdir)/$*.Td
+
+POSTCOMPILE = mv -f $(depdir)/$*.Td $(depdir)/$*.d && touch $@
+
+LDFLAGS    +=
+
+LDLIBS     += -lcrypto -lm
+
+ifndef STANDALONE
+LDLIBS     += -lkeccak
+endif
+
+
+################################################################################
+# ring requires tau=0    #######################################################
+################################################################################
+
+ifeq (R5ND,$(findstring R5ND, $(ALG)))
+	override TAU=0
+endif
+
+
+################################################################################
+# c PreProcessor Defines #######################################################
+################################################################################
 
 # TAU?
 ifdef TAU
@@ -96,8 +181,7 @@ ifdef TAU2_LEN
     override CFLAGS += -DROUND5_API_TAU2_LEN=$(TAU2_LEN)
 endif
 
-
-# Use AES in CTR mode instead of cSHAKE for the generation of deterministic random numbers
+# Use AES in CTR mode instead of TupleHashXof in the generation of A
 ifdef AES
     override CFLAGS += -DUSE_AES_DRBG
 endif
@@ -122,9 +206,14 @@ ifdef CM_CT
     override CFLAGS += -DCM_CT
 endif
 
-# Enable time measurement of KEMs
-ifdef TIMING
-    override CFLAGS += -DTIMING=$(TIMING)
+# 64-bit shift left with variable shift amount constant-time?
+ifdef SHIFT_LEFT64_CONSTANT_TIME
+    override CFLAGS += -DSHIFT_LEFT64_CONSTANT_TIME
+endif
+
+# Enable constant-time countermeasures?
+ifdef CM_MALFORMED
+    override CFLAGS += -DCM_MALFORMED
 endif
 
 # Enable AVX2?
@@ -132,9 +221,15 @@ ifdef AVX2
     override CFLAGS += -DAVX2
 endif
 
-# 64-bit shift left with variable shift amount constant-time?
-ifdef SHIFT_LEFT64_CONSTANT_TIME
-    override CFLAGS += -DSHIFT_LEFT64_CONSTANT_TIME
+# Enable time measurement of KEMs
+ifdef TIMING
+    override CFLAGS += -DTIMING=$(TIMING)
+endif
+
+
+# Enable time measurement of KEMs
+ifndef WARNING
+    override CFLAGS += -w
 endif
 
 # If debug is specified, compile differently
@@ -144,18 +239,6 @@ else
     override CFLAGS += -g -DDEBUG -march=native -mtune=native -O3 -fomit-frame-pointer -fwrapv
 endif
 
-# Compute challenges
-ifdef CHALLENGE
-    override CFLAGS += -DCHALLENGE
-endif
-
-DEPFLAGS    = -MT $@ -MMD -MP -MF $(depdir)/$*.Td
-
-POSTCOMPILE = mv -f $(depdir)/$*.Td $(depdir)/$*.d && touch $@
-
-LDFLAGS    +=
-
-LDLIBS     += -lcrypto -lkeccak -lm
 
 
 ################################################################################
@@ -243,18 +326,17 @@ $(objdir)/%.o: $(srcdir)/%.c $(depdir)/%.d
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 	@$(POSTCOMPILE)
 
-
 ################################################################################
 # Executable Creation ##########################################################
 ################################################################################
 
 ifneq (optimized,$(implementation))
 # createAfixed for reference/configurable
-$(builddir)/createAfixed: $(objdir)/parameters.o $(objdir)/r5_parameter_sets.o $(rngobj)  $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shaking.o $(objdir)/keccakf1600.o $(objdir)/aesdrbg.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
+$(builddir)/createAfixed:  $(rngobj) $(hashobj) $(fips202obj) $(fips2021obj) $(fips2024obj) $(aesctrobj) $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o $(objdir)/parameters.o $(objdir)/r5_parameter_sets.o
 	$(CC) $(LDFLAGS) $^ $(LOADLIBS) $(LDLIBS) -o $@
 else ifeq (1,$(TAU))
 # createAfixed for optimized with tau=1
-$(builddir)/createAfixed: $(rngobj)  $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/r5_hash.o $(objdir)/shaking.o $(objdir)/keccakf1600.o $(objdir)/aesdrbg.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
+$(builddir)/createAfixed:  $(rngobj) $(hashobj) $(fips202obj) $(fips2021obj) $(fips2024obj) $(aesctrobj) $(objdir)/misc.o $(objdir)/r5_memory.o $(objdir)/little_endian.o $(objdir)/a_fixed.o $(objdir)/a_random.o $(objdir)/createAfixed/createAfixed.o
 	$(CC) $(LDFLAGS) $^ $(LOADLIBS) $(LDLIBS) -o $@
 endif
 

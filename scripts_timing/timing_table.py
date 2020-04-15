@@ -28,7 +28,7 @@ algorithms = ["KeyGen", "Enc", "Dec", "Total"]
 cm_types =  ["None", "CM_CACHE", "CM_CT"]
 
 
-filename = "timing_results.txt"
+filename = "timing_results_tuplehash100000.txt"
 
 e = r'(\d+\.\d{2})'
 e2 = r'(\d+)'
@@ -113,13 +113,15 @@ def create_latex_table():
 
     # block of rows with CPA parameter sets
     s += " \\midrule\n"
+    skip = False
     for paramSet in parameterSetsCPA:
         s += latex_name(paramSet)
         s += "&"
         for alg in algorithms:
             for cm_type in cm_types:
                 s += "&"
-                value = find_value(paramSet, cm_type, alg)
+                #value = find_value(paramSet, cm_type, alg)
+                value = find_value(paramSet, cm_type, alg, "None", "0", "None", skip)
                 s += value[1:len(value)-1]
         
         s += "\\\\\n"
@@ -132,7 +134,8 @@ def create_latex_table():
         for alg in algorithms:
             for cm_type in cm_types:
                 s += "&"
-                value = find_value(paramSet, cm_type, alg)
+                #value = find_value(paramSet, cm_type, alg)
+                value = find_value(paramSet, cm_type, alg, "None", "0", "None", skip)
                 s += value[1:len(value)-1]
         
         s += "\\\\\n"
@@ -145,7 +148,8 @@ def create_latex_table():
         for alg in algorithms:
             for cm_type in cm_types:
                 s += "&"
-                value = find_value(paramSet, cm_type, alg)
+                #value = find_value(paramSet, cm_type, alg)
+                value = find_value(paramSet, cm_type, alg, "None", "0", "None", skip)
                 s += value[1:len(value)-1]
         s += "\\\\\n"
 
@@ -157,13 +161,101 @@ def create_latex_table():
     print s
 
 
-def create_latex_table_avx2():
+def create_latex_table_(tau, library):
     s = ""
     s += "\\begin{landscape}\n"
     s += "\\begin{table*}\n"
     
-    s += "\\caption{Performance comparison of Round5 KEMs, r5\_cpa\_kem and r5\_cca\_kem, using different parameter sets and different type of countermeasures against timing attacks with AVX2 instructions. The first block of rows include performance numbers for ring parameter sets. The second block of rows shows performance numbers for non-ring parameter sets. last row block compares performance of R5N1\_1CPA\_0d parameter set for different TAU choices. Numbers are given in thousands of CPU cycles in a machine running at 2.6 GHz. }\n"
-    s += "\label{tab:timing_countermeasure_comparison_avx2}\n"
+    s += "\\caption{Performance comparison of Round5 KEMs, r5\_cpa\_kem and r5\_cca\_kem, using different parameter sets and different types of countermeasures against timing attacks without AVX2 instructions, fn with TAU="
+    s += tau
+    s += " and "
+    s += library
+    s += " TupleHash library."
+    s += " The first block of rows includes performance numbers for ring parameter sets. The second block of rows shows performance numbers for non-ring parameter sets. Numbers are given in thousands of CPU cycles in a machine running at 2.6 GHz. }\n"
+
+    s += "\label{tab:timing_countermeasure_comparison_tau"
+    s += tau
+    s += "}\n"
+    
+    s += "\\tiny\n"
+    
+    s += "\\begin{center} \n"
+    s += "\\begin{tabular}{c|c|ccc|ccc|ccc|ccc} \n"
+    
+    s += "\\toprule\n"
+    s += " \multirow{2}{*}{Parameter set} & \multirow{2}{*}{Flags} & \multicolumn{3}{c}{KeyGen} & \multicolumn{3}{c}{Enc} & \multicolumn{3}{c}{Dec} & \multicolumn{3}{c}{Total}\\\\ \n"
+    s += "                                &                        & cacheless & cm\_cache & cm\_ct & cacheless & cm\_cache & cm\_ct &cacheless & cm\_cache & cm\_ct &cacheless & cm\_cache & cm\_ct \\\\ \n"
+    
+    # block of rows comparing RING parameter sets with AVX2 flag
+    s += " \\midrule\n"
+    for paramSet in parameterSetsRing:
+        s += latex_name(paramSet)
+        s += "& TAU=0"
+        for alg in algorithms:
+            for cm_type in cm_types:
+                s += "&"
+                skip = False
+                if cm_type == "CM_CACHE" or cm_type == "CM_CT":
+                    skip = False
+                value = find_value(paramSet, cm_type, alg, "None", "0", library, skip)
+                s += value[1:len(value)-1]
+        s += "\\\\\n"
+    
+    
+    # block of rows comparing non-ring parameter sets with AVX2 flag
+    s += " \\midrule\n"
+    for paramSet in parameterSetsNonRing:
+        s += latex_name(paramSet)
+        s += "& TAU="
+        s += tau
+        for alg in algorithms:
+            for cm_type in cm_types:
+                s += "&"
+                skip = False
+                if cm_type == "CM_CACHE" or cm_type == "CM_CT":
+                    skip = False
+                value = find_value(paramSet, cm_type, alg, "None", tau, library, skip)
+                s += value[1:len(value)-1]
+        s += "\\\\\n"
+    
+    # block of rows comparing Tau=1 and Tau=0
+#    s += " \\midrule\n"
+#    for t in ["0", "1", "2"]:
+#        for paramSet in ["R5N1_5CCA_0d"]:
+#            s += latex_name(paramSet)
+#            s += "& TAU="
+#            s += t
+#            for alg in algorithms:
+#                for cm_type in cm_types:
+#                    s += "&"
+#                    skip = False
+#                    if cm_type == "CM_CACHE" or cm_type == "CM_CT":
+#                        skip = False
+#                    value = find_value(paramSet, cm_type, alg, "None", t, "None", skip)
+#                    s += value[1:len(value)-1]
+#        s += "\\\\\n"
+
+    
+    s += "\\bottomrule\n"
+    s += "\\end{tabular}\n"
+    s += "\\end{center}\n"
+    s += "\\end{table*}\n"
+    s += "\\end{landscape}\n"
+    print s
+
+def create_latex_table_avx2(tau):
+    s = ""
+    s += "\\begin{landscape}\n"
+    s += "\\begin{table*}\n"
+    
+    s += "\\caption{Performance comparison of Round5 KEMs, r5\_cpa\_kem and r5\_cca\_kem, using different parameter sets optimized with AVX2 instructions for fn with TAU="
+    s += tau
+    s += " using the STANDALONE TupleHash library. The first block of rows includes performance numbers for ring parameter sets. The second block of rows shows performance numbers for non-ring parameter sets. The last row block compares performance of R5N1\_5CCA\_0d parameter set for different TAU choices. Numbers are given in thousands of CPU cycles in a machine running at 2.6 GHz. }\n"
+
+    s += "\label{tab:timing_countermeasure_comparison_avx2"
+    s += tau
+    s += "}\n"
+
     s += "\\tiny\n"
     
     s += "\\begin{center} \n"
@@ -177,12 +269,12 @@ def create_latex_table_avx2():
     s += " \\midrule\n"
     for paramSet in parameterSetsRing:
         s += latex_name(paramSet)
-        s += "& AVX2 "
+        s += "& AVX2, TAU=0"
         for alg in algorithms:
             for cm_type in cm_types:
                 s += "&"
                 skip = True
-                if cm_type == "CM_CACHE" or cm_type == "CM_CT":
+                if cm_type == "CM_CT":# or cm_type == "CM_CACHE":
                     skip = False
                 value = find_value(paramSet, cm_type, alg, "AVX", "0", "None", skip)
                 s += value[1:len(value)-1]
@@ -193,21 +285,22 @@ def create_latex_table_avx2():
     s += " \\midrule\n"
     for paramSet in parameterSetsNonRing:
         s += latex_name(paramSet)
-        s += "& AVX2 "
+        s += "& AVX2, TAU="
+        s += tau
         for alg in algorithms:
             for cm_type in cm_types:
                 s += "&"
                 skip = True
-                if cm_type == "CM_CACHE" or cm_type == "CM_CT":
+                if cm_type == "CM_CT":# or cm_type == "CM_CACHE":
                     skip = False
-                value = find_value(paramSet, cm_type, alg, "AVX", "2", "None", skip)
+                value = find_value(paramSet, cm_type, alg, "AVX", tau, "None", skip)
                 s += value[1:len(value)-1]
         s += "\\\\\n"
 
     # block of rows comparing Tau=1 and Tau=0
     s += " \\midrule\n"
-    for t in ["0", "1"]:
-        for paramSet in ["R5N1_1CPA_0d"]:
+    for t in ["0", "1", "2"]:
+        for paramSet in ["R5N1_5CCA_0d"]:
             s += latex_name(paramSet)
             s += "& AVX2, TAU="
             s += t
@@ -215,7 +308,7 @@ def create_latex_table_avx2():
                 for cm_type in cm_types:
                     s += "&"
                     skip = True
-                    if cm_type == "CM_CACHE" or cm_type == "CM_CT":
+                    if cm_type == "CM_CT":# or cm_type == "CM_CACHE":
                         skip = False
                     value = find_value(paramSet, cm_type, alg, "AVX", t, "None", skip)
                     s += value[1:len(value)-1]
@@ -229,9 +322,16 @@ def create_latex_table_avx2():
     s += "\\end{landscape}\n"
     print s
 
-create_latex_table()
 
 
-create_latex_table_avx2()
+#create_latex_table_("0", "external XKCP")
+
+create_latex_table_("0", "STANDALONE")
+
+#create_latex_table_("2")
+
+create_latex_table_avx2("0")
+
+#create_latex_table_avx2("2")
 
 

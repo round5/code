@@ -4,10 +4,10 @@ CCASCHEMES="R5ND_1CCA_0d R5ND_3CCA_0d R5ND_5CCA_0d R5ND_1CCA_5d R5ND_3CCA_5d R5N
 SCHEMES="$CPASCHEMES $CCASCHEMES "
 
 
-IMPLEMENTATIONS="optimized reference configurable"
+IMPLEMENTATIONS="optimized" #"optimized reference configurable"
 
-CTCONFIGURATIONS="CM_CT AVX2 None CM_CACHE"
-FIPS202LIBRARY="STANDALONE None"
+CTCONFIGURATIONS="None CM_CACHE CM_CT AVX2" #"AVX2"
+FIPS202LIBRARY="STANDALONE None" #"None"
 
 SUCCESS=true
 
@@ -62,22 +62,23 @@ do
                 cd $currentdir/$TMPDIR/$implementation
 
                 make clean
-                echo "ALG=$scheme $ctconf=1 $fips=1 TAU=$tau NIST_KAT_GENERATION=1 Implementation=$implementation"
+                echo "KAT KEM(ALG=$scheme $implementation, TAU=$tau, $fips, $ctconf NIST_KAT_GENERATION=1):"
+                echo "KAT KEM(ALG=$scheme $implementation, TAU=$tau, $fips, $ctconf NIST_KAT_GENERATION=1):"  >> $currentdir/$KATRESULTS
                 # places output of last kat in .debug_kats.txt
-                make ALG=$scheme $ctconf=1 $fips=1 TAU=$tau NIST_KAT_GENERATION=1  > $currentdir/.debug_kats.txt
+                make -s ALG=$scheme $ctconf=1 $fips=1 TAU=$tau NIST_KAT_GENERATION=1 TIMING=1 > $currentdir/.debug_kats.txt
 
                 ./build/PQCgenKAT_kem
 
                 result=$(shasum PQCkemKAT*.rsp | shasum -c $currentdir/$KATDIR/NIST/KEM/shasum_$scheme.sha | grep "OK")
                 # test whether the output string has lenght 0
                 if [ -z "$result" ]; then
-                    echo "KAT KEM($scheme, $implementation, TAU=$tau, $fips, $ctconf) FAILED"
-                    echo "KAT KEM($scheme, $implementation, TAU=$tau, $fips, $ctconf) FAILED" >> $currentdir/$KATRESULTS
+                    echo "FAILED"
+                    echo "FAILED" >> $currentdir/$KATRESULTS
                     SUCCESS=false
                     break
                 else
-                    echo "KAT KEM($scheme, $implementation, TAU=$tau, $fips, $ctconf) OK!"
-                    echo "KAT KEM($scheme, $implementation, TAU=$tau, $fips, $ctconf) OK!" >> $currentdir/$KATRESULTS
+                    echo "OK!"
+                    echo "OK!" >> $currentdir/$KATRESULTS
                 fi
 
                 if [ "$SUCCESS" == false ]; then
@@ -146,21 +147,22 @@ do
 
                 make clean
 
-                echo "ALG=$scheme $ctconf=1 $fips=1 TAU=$tau Implementation=$implementation NIST_KAT_GENERATION=1"
+                echo "KAT PKE(ALG=$scheme Implementation=$implementation $ctconf=1 $fips=1 TAU=$tau NIST_KAT_GENERATION=1): "
+                echo "KAT PKE(ALG=$scheme Implementation=$implementation $ctconf=1 $fips=1 TAU=$tau NIST_KAT_GENERATION=1): " >> $currentdir/$KATRESULTS
                 # places output of last kat in .debug_kats.txt
-                make ALG=$scheme $ctconf=1 $fips=1 TAU=$tau NIST_KAT_GENERATION=1 > $currentdir/.debug_kats.txt
+                make ALG=$scheme $ctconf=1 $fips=1 TAU=$tau NIST_KAT_GENERATION=1 TIMING=1> $currentdir/.debug_kats.txt
 
                 ./build/PQCgenKAT_encrypt
                 result=$(shasum PQCencryptKAT*.rsp | shasum -c $currentdir/$KATDIR/NIST/PKE/shasum_$scheme.sha | grep "OK")
                 # test whether the output string has lenght 0
                 if [ -z "$result" ]; then
-                    echo "KAT PKE($scheme, $implementation, Tau=$tau, $fips, $ctconf) FAILED"
-                    echo "KAT PKE($scheme, $implementation, Tau=$tau, $fips, $ctconf) FAILED" >> $currentdir/$KATRESULTS
+                    echo "FAILED"
+                    echo "FAILED" >> $currentdir/$KATRESULTS
                     SUCCESS=false
                     break
                 else
-                    echo "KAT PKE($scheme, $implementation, Tau=$tau, $fips, $ctconf) OK!"
-                    echo "KAT PKE($scheme, $implementation, Tau=$tau, $fips, $ctconf) OK!" >> $currentdir/$KATRESULTS
+                    echo "OK!"
+                    echo "OK!" >> $currentdir/$KATRESULTS
                 fi
 
                 if [ "$SUCCESS" == false ]; then

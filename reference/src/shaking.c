@@ -1,1 +1,0 @@
-library/shaking.c

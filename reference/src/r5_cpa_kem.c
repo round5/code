@@ -33,7 +33,6 @@ int r5_cpa_kem_keygen(unsigned char *pk, unsigned char *sk Parameters) {
 int r5_cpa_kem_encapsulate(unsigned char *ct, unsigned char *k, const unsigned char *pk Parameters) {
     unsigned char *rho;
     unsigned char *m;
-    unsigned char *hash_input;
 
     /* Generate a random m */
     m = checked_malloc(PARAMS_KAPPA_BYTES);
@@ -46,13 +45,8 @@ int r5_cpa_kem_encapsulate(unsigned char *ct, unsigned char *k, const unsigned c
     /* Encrypt m */
     r5_cpa_pke_encrypt(ct, pk, m, rho Params);
 
-    /* k = H(m, ct) */
-    hash_input = checked_malloc((size_t) (PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE));
-    memcpy(hash_input, m, PARAMS_KAPPA_BYTES);
-    memcpy(hash_input + PARAMS_KAPPA_BYTES, ct, PARAMS_CT_SIZE);
-    hash(k, PARAMS_KAPPA_BYTES, hash_input, (size_t) (PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE) Params);
-
-    free(hash_input);
+    HCPAKEM(k, PARAMS_KAPPA_BYTES, m, PARAMS_KAPPA_BYTES, ct, PARAMS_CT_SIZE Params);
+    
     free(rho);
     free(m);
 
@@ -60,22 +54,17 @@ int r5_cpa_kem_encapsulate(unsigned char *ct, unsigned char *k, const unsigned c
 }
 
 int r5_cpa_kem_decapsulate(unsigned char *k, const unsigned char *ct, const unsigned char *sk Parameters) {
-    unsigned char *hash_input;
+
     unsigned char *m;
 
     /* Allocate space */
-    hash_input = checked_malloc((size_t) (PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE));
     m = checked_malloc(PARAMS_KAPPA_BYTES);
 
     /* Decrypt m */
     r5_cpa_pke_decrypt(m, sk, ct Params);
 
-    /* k = H(m, ct) */
-    memcpy(hash_input, m, PARAMS_KAPPA_BYTES);
-    memcpy(hash_input + PARAMS_KAPPA_BYTES, ct, PARAMS_CT_SIZE);
-    hash(k, PARAMS_KAPPA_BYTES, hash_input, (size_t) (PARAMS_KAPPA_BYTES + PARAMS_CT_SIZE) Params);
-
-    free(hash_input);
+    HCPAKEM(k, PARAMS_KAPPA_BYTES, m, PARAMS_KAPPA_BYTES, ct, PARAMS_CT_SIZE Params);
+   
     free(m);
 
     return 0;

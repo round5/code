@@ -27,6 +27,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  43
+#define PARAMS_MAL_C2_TH   267
 #define CRYPTO_ALGNAME     "R5ND_1CPA_0d"
 #elif defined(R5ND_3CPA_0d)
 #define PARAMS_KAPPA_BYTES 24
@@ -42,6 +44,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  50
+#define PARAMS_MAL_C2_TH   444
 #define CRYPTO_ALGNAME     "R5ND_3CPA_0d"
 #elif defined(R5ND_5CPA_0d)
 #define PARAMS_KAPPA_BYTES 32
@@ -57,6 +61,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  67
+#define PARAMS_MAL_C2_TH   545
 #define CRYPTO_ALGNAME     "R5ND_5CPA_0d"
 #elif defined(R5ND_1CCA_0d)
 #define ROUND5_CCA_PKE
@@ -73,6 +79,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  34
+#define PARAMS_MAL_C2_TH   267
 #define CRYPTO_ALGNAME     "R5ND_1CCA_0d"
 #elif defined(R5ND_3CCA_0d)
 #define ROUND5_CCA_PKE
@@ -89,6 +97,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  52
+#define PARAMS_MAL_C2_TH   444
 #define CRYPTO_ALGNAME     "R5ND_3CCA_0d"
 #elif defined(R5ND_5CCA_0d)
 #define ROUND5_CCA_PKE
@@ -105,6 +115,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  70
+#define PARAMS_MAL_C2_TH   545
 #define CRYPTO_ALGNAME     "R5ND_5CCA_0d"
 #elif defined(R5ND_1CPA_5d)
 #define PARAMS_KAPPA_BYTES 16
@@ -120,7 +132,10 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           5
 #define PARAMS_XE          190
+#define PARAMS_MAL_BIN_TH  50
+#define PARAMS_MAL_C2_TH   267
 #define CRYPTO_ALGNAME     "R5ND_1CPA_5d"
+
 #elif defined(R5ND_3CPA_5d)
 #define PARAMS_KAPPA_BYTES 24
 #define PARAMS_D           756
@@ -135,7 +150,10 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           5
 #define PARAMS_XE          218
+#define PARAMS_MAL_BIN_TH  61
+#define PARAMS_MAL_C2_TH   444
 #define CRYPTO_ALGNAME     "R5ND_3CPA_5d"
+
 #elif defined(R5ND_5CPA_5d)
 #define PARAMS_KAPPA_BYTES 32
 #define PARAMS_D           940
@@ -150,6 +168,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           5
 #define PARAMS_XE          234
+#define PARAMS_MAL_BIN_TH  56
+#define PARAMS_MAL_C2_TH   545
 #define CRYPTO_ALGNAME     "R5ND_5CPA_5d"
 #elif defined(R5ND_1CCA_5d)
 #define ROUND5_CCA_PKE
@@ -166,6 +186,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           5
 #define PARAMS_XE          190
+#define PARAMS_MAL_BIN_TH  51
+#define PARAMS_MAL_C2_TH   267
 #define CRYPTO_ALGNAME     "R5ND_1CCA_5d"
 #elif defined(R5ND_3CCA_5d)
 #define ROUND5_CCA_PKE
@@ -182,6 +204,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           5
 #define PARAMS_XE          218
+#define PARAMS_MAL_BIN_TH  61
+#define PARAMS_MAL_C2_TH   444
 #define CRYPTO_ALGNAME     "R5ND_3CCA_5d"
 #elif defined(R5ND_5CCA_5d)
 #define ROUND5_CCA_PKE
@@ -198,6 +222,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           5
 #define PARAMS_XE          234
+#define PARAMS_MAL_BIN_TH  80
+#define PARAMS_MAL_C2_TH   545
 #define CRYPTO_ALGNAME     "R5ND_5CCA_5d"
 #elif defined(R5N1_1CPA_0d)
 #define PARAMS_KAPPA_BYTES 16
@@ -213,6 +239,8 @@
 #define PARAMS_M_BAR       7
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  29
+#define PARAMS_MAL_C2_TH   267
 #define CRYPTO_ALGNAME     "R5N1_1CPA_0d"
 #elif defined(R5N1_3CPA_0d)
 #define PARAMS_KAPPA_BYTES 24
@@ -228,6 +256,8 @@
 #define PARAMS_M_BAR       8
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  43
+#define PARAMS_MAL_C2_TH   444
 #define CRYPTO_ALGNAME     "R5N1_3CPA_0d"
 #elif defined(R5N1_5CPA_0d)
 #define PARAMS_KAPPA_BYTES 32
@@ -243,6 +273,8 @@
 #define PARAMS_M_BAR       8
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  43
+#define PARAMS_MAL_C2_TH   545
 #define CRYPTO_ALGNAME     "R5N1_5CPA_0d"
 #elif defined(R5N1_1CCA_0d)
 #define ROUND5_CCA_PKE
@@ -259,6 +291,8 @@
 #define PARAMS_M_BAR       8
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  35
+#define PARAMS_MAL_C2_TH   267
 #define CRYPTO_ALGNAME     "R5N1_1CCA_0d"
 #elif defined(R5N1_3CCA_0d)
 #define ROUND5_CCA_PKE
@@ -275,6 +309,8 @@
 #define PARAMS_M_BAR       8
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  37
+#define PARAMS_MAL_C2_TH   444
 #define CRYPTO_ALGNAME     "R5N1_3CCA_0d"
 #elif defined(R5N1_5CCA_0d)
 #define ROUND5_CCA_PKE
@@ -291,6 +327,8 @@
 #define PARAMS_M_BAR       8
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  43
+#define PARAMS_MAL_C2_TH   545
 #define CRYPTO_ALGNAME     "R5N1_5CCA_0d"
 #elif defined(R5ND_0CPA_2iot)
 #define PARAMS_KAPPA_BYTES 16
@@ -306,6 +344,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           2
 #define PARAMS_XE          53
+#define PARAMS_MAL_BIN_TH  45
+#define PARAMS_MAL_C2_TH   267
 #define CRYPTO_ALGNAME     "R5ND_0CPA_2iot"
 #elif defined(R5ND_1CPA_4longkey)
 #define PARAMS_KAPPA_BYTES 24
@@ -321,6 +361,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           4
 #define PARAMS_XE          163
+#define PARAMS_MAL_BIN_TH  66
+#define PARAMS_MAL_C2_TH   365
 #define CRYPTO_ALGNAME     "R5ND_1CPA_4longkey"
 #elif defined(R5N1_3CCA_0smallCT)
 #define ROUND5_CCA_PKE
@@ -337,6 +379,8 @@
 #define PARAMS_M_BAR       1
 #define PARAMS_F           0
 #define PARAMS_XE          0
+#define PARAMS_MAL_BIN_TH  50
+#define PARAMS_MAL_C2_TH   444
 #define CRYPTO_ALGNAME     "R5N1_3CCA_0smallCT"
 #elif defined(R5ND_0CPA_0fail_phi_0)
 #define PARAMS_KAPPA_BYTES 16
@@ -1337,8 +1381,6 @@ typedef uint8_t modt_t;
 #define PARAMS_MUT_SIZE BITS_TO_BYTES(PARAMS_MU * PARAMS_T_BITS)
 
 
-
-
 // parameters required for sampling of secret keys
 #define PARAMS_RS_DIV       (0x10000 / PARAMS_D)
 #define PARAMS_RS_LIM       (PARAMS_D * PARAMS_RS_DIV)
@@ -1346,6 +1388,12 @@ typedef uint8_t modt_t;
 #define PARAMS_XSIZE        32  // amount of 16 bit numbers sampled at once
 #define PARAMS_XMASK        0x1F
 #define CTSECRETVECTOR64  (PARAMS_D+63)/64 //# of 64-bit words.
+
+// Disable AVX2 if not supported by platform
+#ifndef __AVX2__
+#warning AVX2 not supported by platform
+#undef AVX2
+#endif
 
 // If AVX2, determine CM_CT and CM_CACHE
 #ifdef AVX2
@@ -1359,18 +1407,25 @@ typedef uint8_t modt_t;
 #endif
 #endif
 
-// Disable AVX2 if not supported by platform
-#ifndef __AVX2__
-#warning AVX2 not supported by platform
-#undef AVX2
+#if (defined(STANDALONE) && defined(AVX2) && (PARAMS_N_BAR > 1))
+#define PARAMS_N_BAR_4x (4*((PARAMS_N_BAR * 3)/4))
+#else
+#define PARAMS_N_BAR_4x PARAMS_N_BAR
 #endif
+
+#if (defined(STANDALONE) && defined(AVX2) && (PARAMS_M_BAR > 1))
+#define PARAMS_M_BAR_4x (4*((PARAMS_M_BAR * 3)/4))
+#else
+#define PARAMS_M_BAR_4x PARAMS_M_BAR
+#endif
+
 
 // ternary vector type
 #if  ((defined(CM_CACHE) || defined(CM_CT) ) && (PARAMS_N == 1)) || ( defined(CM_CT)  && (PARAMS_N != 1))  || (defined(AVX2) && (PARAMS_N == 1))// constant-time type
 typedef  int16_t tern_coef_type;
 typedef  tern_coef_type tern_secret[PARAMS_D];
-typedef  tern_secret tern_secret_s[PARAMS_N_BAR];
-typedef  tern_secret tern_secret_r[PARAMS_M_BAR];
+typedef  tern_secret tern_secret_s[PARAMS_N_BAR_4x];
+typedef  tern_secret tern_secret_r[PARAMS_M_BAR_4x];
 
 #else
 //    fast index type
@@ -1388,7 +1443,7 @@ typedef tern_secret tern_secret_r[PARAMS_M_BAR];
 
 
 // Definition of TAU parameter
-// Default for non-ring is 2
+// Default for non-ring is 0
 #if !defined(ROUND5_API_TAU) && PARAMS_K != 1
 #undef ROUND5_API_TAU
 #define ROUND5_API_TAU 2
