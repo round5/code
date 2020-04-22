@@ -27,7 +27,7 @@ static const uint64_t KeccakF_RoundConstants[NROUNDS] =
 	0x0000000080000001ULL, 0x8000000080008008ULL
 };
 
-inline uint64_t load64(const uint8_t *x)
+static inline uint64_t load64(const uint8_t *x)
 {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 	return *((const uint64_t *)(x));
@@ -41,7 +41,7 @@ inline uint64_t load64(const uint8_t *x)
 
 
 
-inline void store64(uint8_t *x, uint64_t u)
+static inline void store64(uint8_t *x, uint64_t u)
 {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 	*((uint64_t *)(x)) = u;
