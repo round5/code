@@ -1389,10 +1389,9 @@ typedef uint8_t modt_t;
 #define PARAMS_XMASK        0x1F
 #define CTSECRETVECTOR64  (PARAMS_D+63)/64 //# of 64-bit words.
 
-// Disable AVX2 if not supported by platform
-#ifndef __AVX2__
-#warning AVX2 not supported by platform
-#undef AVX2
+// If AVX2, but not supported by platform
+#if defined(AVX2) && !defined(__AVX2__)
+#error AVX2 not supported by platform
 #endif
 
 // If CM_CT and CM_CACHE, the CM_CT only
