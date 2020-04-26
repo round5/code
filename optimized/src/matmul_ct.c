@@ -10,7 +10,7 @@
 
 #if !defined(AVX2)
 
-#include "string.h"
+#include <string.h>
 
 // B = A * S
 
