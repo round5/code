@@ -17,6 +17,17 @@
 #include <stdio.h>
 #include <string.h>
 
+// MSVC does not support C99 keyword "restrict".
+#ifdef _MSC_VER
+#   ifndef restrict
+#       if _MSC_VER >= 1400
+#           define restrict __restrict
+#       else
+#           define restrict
+#       endif
+#   endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
