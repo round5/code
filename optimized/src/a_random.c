@@ -13,9 +13,6 @@
 #include "little_endian.h"
 #include "drbg.h"
 
-
-#define NBLOCKS 8
-
 #if (defined(AVX2) && defined(STANDALONE) )
 #define AVX2SHAKE_A_GEN
 #endif

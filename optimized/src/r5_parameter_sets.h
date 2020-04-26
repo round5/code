@@ -1395,6 +1395,11 @@ typedef uint8_t modt_t;
 #undef AVX2
 #endif
 
+// If CM_CT and CM_CACHE, the CM_CT only
+#if (defined(CM_CACHE) && defined(CM_CT))
+#undef CM_CACHE
+#endif
+
 // If AVX2, determine CM_CT and CM_CACHE
 #ifdef AVX2
 #if !defined(CM_CACHE) && !defined(CM_CT)
@@ -1481,7 +1486,6 @@ typedef tern_secret tern_secret_r[PARAMS_M_BAR];
 #define PARAMS_H3       ((1 << (PARAMS_P_BITS - PARAMS_T_BITS - 1)) + (1 << (PARAMS_P_BITS - PARAMS_B_BITS - 1)) - (1 << (PARAMS_Q_BITS - PARAMS_Z_BITS - 1)))
 
 // Packing shift
-//#if PARAMS_K != 1
 #if PARAMS_B_BITS == 1
 #define PACK_SHIFT 3
 #define PACK_AND 7
@@ -1494,7 +1498,9 @@ typedef tern_secret tern_secret_r[PARAMS_M_BAR];
 #define PACK_SHIFT 1
 #define PACK_AND 1
 #endif
-//#endif
+
+// number of blocks in the generatiton of A
+#define NBLOCKS 8
 
 #endif /* _R5_PARAMETER_SETS_H_ */
 

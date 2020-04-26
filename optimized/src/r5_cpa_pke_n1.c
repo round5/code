@@ -84,7 +84,6 @@ int r5_cpa_pke_keygen(uint8_t *pk, uint8_t *sk) {
     
     randombytes(pk, PARAMS_KAPPA_BYTES); // sigma = seed of (permutation of) A
 #if PARAMS_TAU == 0
-    #define NBLOCKS 8
     modq_t A_random[NBLOCKS*((PARAMS_K+NBLOCKS-1)/NBLOCKS)][PARAMS_D];
     create_A_random((modq_t *) A_random, pk);
     #define A_matrix A_random
@@ -161,8 +160,6 @@ int r5_cpa_pke_encrypt(uint8_t *ct, const uint8_t *pk, const uint8_t *m, const u
     
     #undef A_matrix
 #if PARAMS_TAU == 0
-    //modq_t A_random[PARAMS_D][PARAMS_K];
-    #define NBLOCKS 8
     modq_t A_random[NBLOCKS*((PARAMS_K+NBLOCKS-1)/NBLOCKS)][PARAMS_D];
     create_A_random((modq_t *) A_random, pk);
     #define A_matrix A_random

@@ -53,8 +53,6 @@ r5_tuple_hash_xof_squeeze16_4x(o0, o1, o2, o3, olen, &thcontext Params)
 
 /************ A Generation ***********************/
 
-#if (!defined(USE_AES_DRBG))
-
 #if (defined(AVX2))  && (defined(STANDALONE))
 
 #define AGeneration4x(o0, o1, o2, o3, olen, d, i1, i20, i21, i22, i23) \
@@ -62,10 +60,10 @@ r5_tuple_hash_xof_squeeze16_4x(o0, o1, o2, o3, olen, &thcontext Params)
 
 #else
 
+#if (!defined(USE_AES_DRBG))
+
 #define AGeneration(o, olen, d, i1, i2) \
     r5_tuple_hash16(o, olen, d, 4, i1, PARAMS_KAPPA_BYTES, i2, 1, 3 Params)
-
-#endif
 
 #else // AGeneration using AES in counter mode
 
@@ -73,10 +71,8 @@ r5_tuple_hash_xof_squeeze16_4x(o0, o1, o2, o3, olen, &thcontext Params)
 #define AGeneration(o, olen, d, i1, i2) \
     aesctr16(o, olen, d, 4, i1, PARAMS_KAPPA_BYTES, i2, 1 Params)
 
-
-
 #endif
-
+#endif
 
 
 

@@ -41,9 +41,10 @@
 
 #endif
 
+
 // generate a keypair (sigma, B)
 int r5_cpa_pke_keygen(uint8_t *pk, uint8_t *sk) {
-    modq_t A[PARAMS_N];
+    modq_t A[NBLOCKS*  ((PARAMS_N+NBLOCKS-1) / NBLOCKS)];
     modq_t B[PARAMS_N];
     tern_secret S_idx;
 
@@ -79,7 +80,7 @@ int r5_cpa_pke_keygen(uint8_t *pk, uint8_t *sk) {
 int r5_cpa_pke_encrypt(uint8_t *ct, const uint8_t *pk, const uint8_t *m, const uint8_t *rho) {
     size_t i, j;
     modp_t t, tm;
-    modq_t A[PARAMS_N];
+    modq_t A[NBLOCKS*((PARAMS_N+NBLOCKS-1)/NBLOCKS)];
     tern_secret R_idx;
     modq_t U_T[PARAMS_N];
     modp_t B[PARAMS_N];

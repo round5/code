@@ -76,8 +76,8 @@ void AESCTRInit
      const uint8_t *second, uint32_t secondLen
      Parameters)
 {
-    uint8_t key[32];
-    r5_tuple_hash16(key, PARAMS_KAPPA_BYTES, domain, domainLen, first, PARAMS_KAPPA_BYTES, second, 1, 3 Params);
+    uint8_t key[PARAMS_KAPPA_BYTES] = {0};
+    r5_tuple_hash(key, PARAMS_KAPPA_BYTES, domain, domainLen, first, PARAMS_KAPPA_BYTES, second, secondLen, 3 Params);
     AESinCtrModeConfig(context, key Params);
 }
 
