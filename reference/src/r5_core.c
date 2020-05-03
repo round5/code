@@ -351,9 +351,7 @@ int create_A(uint16_t *A, const unsigned char *sigma Parameters) {
         } else if (PARAMS_TAU == 2) {
             permutation_tau_2(A_permutation, sigma Params);
             for (i = 0; i < PARAMS_K; ++i) {
-                for (i = 0; i < PARAMS_K; ++i) {
-                    memcpy(A + (i * els_row), A_master + A_permutation[i], els_row * sizeof (*A));
-                }
+                memcpy(A + (i * els_row), A_master + A_permutation[i], els_row * sizeof (*A));
             }
         }
 

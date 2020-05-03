@@ -148,7 +148,7 @@ int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk Parameters) {
 #endif
 
     /* Compress B q_bits -> p_bits with flooring */
-    round_matrix(B, (size_t) (PARAMS_K * PARAMS_N_BAR), PARAMS_N, PARAMS_Q_BITS, PARAMS_P_BITS, PARAMS_H1);
+    round_matrix(B, (size_t)(PARAMS_K * PARAMS_N_BAR), PARAMS_N, PARAMS_Q_BITS, PARAMS_P_BITS, PARAMS_H1);
 
     /* Serializing and packing */
     pack_pk(pk, sigma, PARAMS_KAPPA_BYTES, B, len_b, PARAMS_P_BITS);
