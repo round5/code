@@ -237,7 +237,7 @@ static int compute_BTR_ring(uint16_t *X, uint16_t *B, const uint16_t *R_idx Para
     const uint32_t size_B_aux = (uint32_t) (PARAMS_D + 1);
 
     /* First we extend (and lift) B */
-    B_aux = checked_malloc((size_t) (2 * size_B_aux) * sizeof (*B_aux));
+    B_aux = checked_malloc((size_t) (2 * (size_t)(size_B_aux)) * sizeof (*B_aux));
 
     if (PARAMS_XE == 0 && PARAMS_F == 0) {
         /* Move to NTRU ring */

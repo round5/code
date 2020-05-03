@@ -148,12 +148,12 @@ int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *pa
     size_t len_b;
 
     /* Calculate sizes */
-    len_s_idx = (size_t) (params->h * params->n_bar);
-    len_b = (size_t) (params->k * params->n_bar * params->n);
+    len_s_idx = (size_t) (params->h) *(size_t)(params->n_bar);
+    len_b = (size_t)(params->k) *  (size_t)(params->n_bar) *  (size_t)(params->n);
     
     /* Allocate space */
     sigma = checked_malloc(params->kappa_bytes);
-    A_permutation = checked_malloc((size_t) (params->d + 1) * sizeof (*A_permutation));
+    A_permutation = checked_malloc((size_t) ((size_t)(params->d) + 1) * sizeof (*A_permutation));
     S_idx = checked_malloc(len_s_idx * sizeof (*S_idx));
     B = checked_malloc(len_b * sizeof (*B));
 
@@ -217,7 +217,7 @@ int r5_cpa_pke_keygen(unsigned char *pk, unsigned char *sk, const parameters *pa
 #endif
 
     /* Compress B q_bits -> p_bits */
-    round_matrix(B, (size_t) (params->k * params->n_bar), params->n, params->q_bits, params->p_bits, params->h1);
+    round_matrix(B, (size_t) (params->k) * (size_t)(params->n_bar), params->n, params->q_bits, params->p_bits, params->h1);
 
     /* Serializing and packing */
     pack_pk(pk, sigma, params->kappa_bytes, B, len_b, params->p_bits);
@@ -254,10 +254,10 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     size_t len_x;
     size_t len_m1;
 
-    len_r_idx = (size_t) (params->h * params->m_bar);
-    len_u = (size_t) (params->m_bar * params->d);
-    len_b = (size_t) (params->d * params->n_bar);
-    len_x = (size_t) (params->n_bar * params->m_bar * params->n);
+    len_r_idx = (size_t)(params->h) * (size_t)(params->m_bar);
+    len_u = (size_t) (params->m_bar) * (size_t)(params->d);
+    len_b = (size_t) (params->d) * (size_t)(params->n_bar);
+    len_x = (size_t) (params->n_bar) * (size_t)(params->m_bar) * (size_t)(params->n);
     len_m1 = (size_t) BITS_TO_BYTES(params->mu * params->b_bits);
 
     sigma = checked_malloc(params->kappa_bytes);
@@ -272,7 +272,7 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
     unpack_pk(sigma, B, pk, params->kappa_bytes, len_b, params->p_bits);
 
     /* Create A from sigma */
-    A_permutation = checked_malloc((size_t) (params->d + 1) * sizeof (*A_permutation));
+    A_permutation = checked_malloc((size_t) ((size_t)(params->d) + 1) * sizeof (*A_permutation));
     create_A(&A, A_permutation, sigma, params);
 
     /* Create R from rho */
@@ -335,7 +335,7 @@ int r5_cpa_pke_encrypt(unsigned char *ct, const unsigned char *pk, const unsigne
 #endif
 
     /* Compress U q_bits -> p_bits */
-    round_matrix(U_T, (size_t) (params->k * params->m_bar), params->n, params->q_bits, params->p_bits, params->h2);
+    round_matrix(U_T, (size_t) (params->k) * (size_t)(params->m_bar), params->n, params->q_bits, params->p_bits, params->h2);
 
     /* X = B * R == R_T * B */
     compute_BTR(X, B, R_idx, params);
@@ -403,8 +403,8 @@ int r5_cpa_pke_decrypt(unsigned char *m, const unsigned char *sk, const unsigned
     size_t len_m1;
 
 
-    len_s_idx = (size_t) (params->h * params->n_bar);
-    len_u = (size_t) (params->d * params->m_bar);
+    len_s_idx = (size_t) (params->h) * (size_t)(params->n_bar);
+    len_u = (size_t) (params->d) * (size_t)(params->m_bar);
     len_x_prime = params->mu;
     len_m1 = (size_t) BITS_TO_BYTES(params->mu * params->b_bits);
 

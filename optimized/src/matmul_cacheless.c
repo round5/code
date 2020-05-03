@@ -9,6 +9,8 @@
 
 #if PARAMS_K != 1 && !defined(CM_CACHE) && !defined(CM_CT)
 
+#include <string.h>
+
 #include "drbg.h"
 
 

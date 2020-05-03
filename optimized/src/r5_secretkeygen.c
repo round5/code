@@ -9,6 +9,12 @@
 #include <immintrin.h>
 #endif
 
+#if (defined(__GNUC__) && __GNUC__ >= 4) || defined(__INTEL_COMPILER) || defined(__clang__)
+#   define ALWAYS_INLINE __attribute__((always_inline))
+#else
+#   define ALWAYS_INLINE
+#endif
+
 #define CTSECRETVECTOR64_4 4*((CTSECRETVECTOR64+3)/4)
 
 #ifndef SHIFT_LEFT64_CONSTANT_TIME
@@ -66,7 +72,7 @@ out = ((out << 32) & tmp) ^ (out & ~tmp); \
 
 #ifndef  AVX2
 
-inline check_and_set( uint64_t secret_vector_64[2][CTSECRETVECTOR64_4], uint16_t x, int h)  __attribute__((always_inline));
+inline check_and_set( uint64_t secret_vector_64[2][CTSECRETVECTOR64_4], uint16_t x, int h)  ALWAYS_INLINE;
 int check_and_set(uint64_t secret_vector_64[2][CTSECRETVECTOR64_4], uint16_t x, int h) {
     
     uint64_t a, b, c, t, tt = 0;
@@ -97,7 +103,7 @@ static const uint64_t VECM[4] =
 { 1L, 2L, 4L, 8L };
 
 
-inline check_and_set( uint64_t secret_vector_64[2][CTSECRETVECTOR64_4], uint16_t x, int h)  __attribute__((always_inline));
+inline check_and_set( uint64_t secret_vector_64[2][CTSECRETVECTOR64_4], uint16_t x, int h)  ALWAYS_INLINE;
 int check_and_set( uint64_t secret_vector_64[2][CTSECRETVECTOR64_4], uint16_t x, int h) {
     
     size_t j;
@@ -239,7 +245,7 @@ void create_secret_vector_internal_4x(tern_secret secret_vector[4], const uint8_
 
 #ifndef  AVX2
 
-inline int probe_cm(uint64_t *v, const uint16_t x)  __attribute__((always_inline));
+inline int probe_cm(uint64_t *v, const uint16_t x)  ALWAYS_INLINE;
 int probe_cm(uint64_t *v, const uint16_t x) {
     int i;
     uint64_t a, b, c, y, z;
@@ -264,7 +270,7 @@ int probe_cm(uint64_t *v, const uint16_t x) {
 static const uint64_t VECM[4] =
 { 1L, 2L, 4L, 8L };
 
-inline int probe_cm(uint64_t *v, const uint16_t x)  __attribute__((always_inline));
+inline int probe_cm(uint64_t *v, const uint16_t x)  ALWAYS_INLINE;
 int probe_cm(uint64_t *v,  const uint16_t x)
 {
     register __m256i vec0 = _mm256_setzero_si256();

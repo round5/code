@@ -553,7 +553,7 @@ void r5_tuple_hash16_4x
 
 //	Local routines:
 
-inline void keccak_absorb
+static inline void keccak_absorb
 	( Context context,
      const uint8_t *input,
      size_t inputLength,

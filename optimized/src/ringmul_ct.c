@@ -9,6 +9,7 @@
 
 #if PARAMS_K == 1 && defined(CM_CT)  && !defined(AVX2)
 
+#include <string.h>
 #include "drbg.h"
 
 // multiplication mod q, result length n
